@@ -1,0 +1,164 @@
+# global configuration
+seed: 2024
+# CUDA device for all GPU operations (vLLM, SentenceTransformer, MinerU)
+device: cuda:3
+# synthetic dataset output directory. Data will save in {output_dir}/{task_name}_final.{export_format}
+output_dir: ./outputs/gsm8k
+# export dataset format
+export_format: jsonl
+
+task:
+  name: gsm8k
+  domain: mathematics
+  demo_examples_path: ./dataset/demo_examples/gsm8k_demo.jsonl
+  task_type: local
+  
+  # local task configuration
+  local:
+    # Parsing Configuration
+    parsing:
+      # Directions to document corpora
+      document_dir: ./dataset/documents
+      method: mineru
+
+    # Retrieval Configuration
+    retrieval:
+      passages_dir: ./dataset/passages
+      method: bm25
+      top_k: 1000        # selected top k passage retrieved
+    generation:
+      # Task instruction used for data generation
+      task_instruction: |
+        Generate a grade school math word problem that requires multi-step reasoning.
+        The problem should involve basic arithmetic operations and have a clear numerical answer.
+      # Input instruction - prepended to model input during inference
+      input_instruction: |
+        The input should be a math word problem that requires multi-step reasoning.
+      # Output instruction - appended to prompt to guide output format (HOW to solve)
+      output_instruction: |
+        The output should contain reasoning process step by step and a final answer.
+      num_examples: 5         # number of initial data
+      temperature: 1.0        # temperature for LLM in initial data generation
+
+    # web task configuration
+  web:
+    huggingface_token: "hf_"        # optional. This parameter can be set by 'export HUGGINGFACE_TOKEN="YOUR TOKEN"'
+    task_instruction: |
+      You are given a word problem involving basic arithmetic, algebra, or geometry. Your task is to carefully read the problem and provide a step-by-step solution for it.
+    input_instruction: |
+      Follow this format: Read the questions and answers carefully, and choose the one you think is appropriate among the three options A, B and C.’ then Q:[Your question here] CHOICES: A: ...,B: ...,C: ...
+    output_instruction: |
+      Your output thinking process and answer should be enclosed within <think> </think> and <answer> </answer> tags, respectively, i.e., <think> thinking process here </think> <answer> a single option here </answer>.
+              
+  # distill task configuration
+  distill:
+    # Task instruction for synthetic data generation
+    task_instruction: |
+      Generate a grade school math word problem that requires multi-step reasoning.
+      The problem should involve basic arithmetic operations and have a clear numerical answer.
+    # Input instruction - prepended to model input during inference
+    input_instruction: |
+      The input should be a math word problem that requires multi-step reasoning.
+    # Output instruction - appended to prompt to guide output format
+    output_instruction: |
+      The output should contain reasoning process step by step and a final answer.
+    # Number of synthetic samples to generate
+    num_samples: 5
+    # Batch size for generation (how many samples to generate per API call)
+    batch_size: 5
+    # Temperature for LLM generation
+    temperature: 1.0
+
+
+# Base model for evaluation and inference load from vllm
+base_model:
+  # Base model path
+  path: Qwen2.5/Qwen2.5-7B
+  # Inference parameters for evaluation
+  inference:
+    temperature: 0.0
+    max_tokens: 1500
+    top_p: 0.95
+    n: 1
+  # Sampling parameters for scoring (pass@n evaluation)
+  scoring:
+    temperature: 1.2
+    n: 4
+
+# LLM used throughout the pipeline
+llm:
+  provider: openai
+  model: gpt-4o-mini
+
+# Answer extraction configuration (HOW to mark final answer)
+answer_extraction:
+  tag: "####"
+  instruction: "Output your final answer after ####"
+
+# Postprocess for LLMs' responses
+postprocess:
+  methods: 
+  - "majority_voting"
+      
+  # Majority voting for quality control of LLM's responses
+  majority_voting:
+    # Number of voting
+    n: 4
+    # Method: "exact_match", "semantic_clustering", "llm_judge"
+    method: semantic_clustering
+    # # Exact match settings (only used if method is "exact_match")
+    # exact_match:
+    #   # For numeric answers, use tolerance instead of strict equality
+    #   numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
+    # Semantic similarity settings (only used if method is "semantic_clustering")
+    semantic_clustering:
+      model_path: BAAI/bge-small-en-v1.5
+      similarity_threshold: 0.85
+    # # LLM judge settings (only used if method is "llm_judge")
+    # llm_judge:
+    #     temperature: 0.3
+
+# Evaluation Configuration
+evaluation:
+  # Batch size for evaluation
+  batch_size: 5
+
+  # Answer comparison configuration (HOW to compare two answers)
+  # Used for both evaluation scoring and majority voting
+  answer_comparison:
+    # Method: "exact_match", "semantic", "llm_judge"
+    method: semantic
+
+    # # Exact match settings (only used if method is "exact_match")
+    # exact_match:
+    #   # For numeric answers, use tolerance instead of strict equality
+    #   numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
+
+    # Semantic similarity settings (only used if method is "semantic")
+    semantic:
+      model_path: BAAI/bge-small-en-v1.5
+      similarity_threshold: 0.85
+
+    # # LLM judge settings (only used if method is "llm_judge")
+    # llm_judge:
+    #   temperature: 0.3
+
+# Rewrite Configuration (Optional)
+rewrite:
+  method: "difficulty_adjust"
+  input_instruction: |
+      The input should be a math word problem that requires multi-step reasoning.
+  output_instruction: |
+      The output should contain reasoning process step by step and a final answer.
+
+  difficulty_adjust:
+    easier_temperature: 0.9
+    harder_temperature: 1.1
+
+# Translation Configuration
+# If language is not 'english', you must specify model_path for the translation model
+translation:
+  language: english  # Target language: 'english' (no translation), 'arabic', etc.
+  # model_path: "path/to/your/Translator"  
+  max_tokens: 256    # Maximum tokens for translation generation
+  batch_size: 1      # Batch size for translation

@@ -1,0 +1,173 @@
+# global configuration
+seed: 2024
+# CUDA device for all GPU operations (vLLM, SentenceTransformer, MinerU)
+device: cuda:7
+# synthetic dataset output directory. Data will save in {output_dir}/{task_name}_final.{export_format}
+output_dir: ./outputs/medqa
+# export dataset format
+export_format: jsonl
+
+task:
+  name: medqa
+  domain: medic
+  demo_examples_path: ./dataset/demo_examples/medqa_demo.jsonl
+  task_type: local
+  
+  # local task configuration
+  local:
+    # Parsing Configuration
+    parsing:
+      # Directions to document corpora
+      document_dir: ./dataset/documents
+      method: mineru
+
+    # Retrieval Configuration
+    retrieval:
+      passages_dir: ./dataset/passages
+      method: bm25
+      top_k: 1000        # selected top k passage retrieved
+    generation:
+      # Task instruction for synthetic data generation
+      task_instruction: |
+        Generate a MedQA-style medical question that requires medical knowledge and clinical reasoning, with one correct answer.
+      # Input instruction - prepended to model input during inference
+      input_instruction: |
+        First clinical vignettes or diagrams. A clinical vignette is a short, descriptive medical case that simulates a real-life scenario involving a patient. 
+        It includes details like: Patient demographics (age, sex, etc.),Medical history,Symptoms and signs,Lab or imaging results,Progression or complication. 
+        Then a USMLE-style multiple-choice question with its four options.
+      # Output instruction - appended to prompt to guide output format
+      output_instruction: |
+        Your output should contains thinking process and a single answer, the thinking process should be enclosed within <think> </think>, i.e., <think> thinking process here </think>.
+      num_examples: 5         # number of initial data
+      temperature: 1.0        # temperature for LLM in initial data generation
+
+  # web task configuration
+  web:
+    huggingface_token: "hf_"        # optional. This parameter can be set by 'export HUGGINGFACE_TOKEN="YOUR TOKEN"'
+    # Task instruction for synthetic data generation
+    task_instruction: |
+      Generate a MedQA-style medical question that requires medical knowledge and clinical reasoning, with one correct answer.
+    # Input instruction - prepended to model input during inference
+    input_instruction: |
+      First a clinical vignettes or diagrams. A clinical vignette is a short, descriptive medical case that simulates a real-life scenario involving a patient. 
+      It includes details like: Patient demographics (age, sex, etc.),Medical history,Symptoms and signs,Lab or imaging results,Progression or complication. 
+      Then a USMLE-style multiple-choice question with its four options.
+    # Output instruction - appended to prompt to guide output format
+    output_instruction: |
+      Your output should contains thinking process and a single answer, the thinking process should be enclosed within <think> </think>, i.e., <think> thinking process here </think>.
+              
+  # distill task configuration
+  distill:
+    # Task instruction for synthetic data generation
+    task_instruction: |
+      Generate a MedQA-style medical question that requires medical knowledge and clinical reasoning, with one correct answer.
+    # Input instruction - prepended to model input during inference
+    input_instruction: |
+      First a clinical vignettes or diagrams. A clinical vignette is a short, descriptive medical case that simulates a real-life scenario involving a patient. 
+      It includes details like: Patient demographics (age, sex, etc.),Medical history,Symptoms and signs,Lab or imaging results,Progression or complication. 
+      Then a USMLE-style multiple-choice question with its four options.
+    # Output instruction - appended to prompt to guide output format
+    output_instruction: |
+      Your output should contains thinking process and a single answer, the thinking process should be enclosed within <think> </think>, i.e., <think> thinking process here </think>.
+    # Number of synthetic samples to generate
+    num_samples: 5
+    # Batch size for generation (how many samples to generate per API call)
+    batch_size: 5
+    # Temperature for LLM generation
+    temperature: 1.0
+
+
+# Base model for evaluation and inference load from vllm
+base_model:
+  # Base model path
+  path: Qwen/Qwen2.5-7B
+  # Inference parameters for evaluation
+  inference:
+    temperature: 0.0
+    max_tokens: 1500
+    top_p: 0.95
+    n: 1
+  # Sampling parameters for scoring (pass@n evaluation)
+  scoring:
+    temperature: 1.2
+    n: 4
+
+# LLM used throughout the pipeline
+llm:
+  provider: openai
+  model: gpt-4o-mini
+
+# Answer extraction configuration (HOW to mark final answer)
+answer_extraction:
+  tag: "<answer>"
+  instruction: "Your answer should be an option only and be enclosed within <answer> </answer> tags, i.e., <answer> a single option here </answer>."
+
+# Postprocess for LLMs' responses
+postprocess:
+  methods: 
+  - majority_voting
+      
+  # Majority voting for quality control of LLM's responses
+  majority_voting:
+    # Number of votings
+    n: 4
+    # Method: "exact_match", "semantic_clustering", "llm_judge"
+    method: exact_match
+    # # Exact match settings (only used if method is "exact_match")
+    # exact_match:
+    #   # For numeric answers, use tolerance instead of strict equality
+    #   numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
+    # Semantic similarity settings (only used if method is "semantic_clustering")
+    semantic_clustering:
+      model_path: BAAI/bge-small-en-v1.5
+      similarity_threshold: 0.85
+    # # LLM judge settings (only used if method is "llm_judge")
+    # llm_judge:
+    #     temperature: 0.3
+
+# Evaluation Configuration
+evaluation:
+  # Batch size for evaluation
+  batch_size: 5
+
+  # Answer comparison configuration (HOW to compare two answers)
+  # Used for both evaluation scoring and majority voting
+  answer_comparison:
+    # Method: "exact_match", "semantic", "llm_judge"
+    method: llm_judge
+
+    # # Exact match settings (only used if method is "exact_match")
+    # exact_match:
+    #   # For numeric answers, use tolerance instead of strict equality
+    #   numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
+
+    # Semantic similarity settings (only used if method is "semantic")
+    semantic:
+      model_path: BAAI/bge-small-en-v1.5
+      similarity_threshold: 0.85
+
+    # # LLM judge settings (only used if method is "llm_judge")
+    # llm_judge:
+    #   temperature: 0.3
+
+# Rewrite Configuration (Optional)
+rewrite:
+  method: difficulty_adjust
+  input_instruction: |
+    First a clinical vignettes or diagrams. A clinical vignette is a short, descriptive medical case that simulates a real-life scenario involving a patient. 
+    It includes details like: Patient demographics (age, sex, etc.),Medical history,Symptoms and signs,Lab or imaging results,Progression or complication. 
+    Then a USMLE-style multiple-choice question with its four options.
+  output_instruction: |
+    Your output should contains thinking process and a single answer, the thinking process should be enclosed within <think> </think>, i.e., <think> thinking process here </think>.
+
+  difficulty_adjust:
+    easier_temperature: 0.9
+    harder_temperature: 1.1
+
+# Translation Configuration
+# If language is not 'english', you must specify model_path for the translation model
+translation:
+  language: english  # Target language: 'english' (no translation), 'arabic', etc.
+  # model_path: "path/to/your/Translator"   
+  max_tokens: 256    # Maximum tokens for translation generation
+  batch_size: 1      # Batch size for translation
