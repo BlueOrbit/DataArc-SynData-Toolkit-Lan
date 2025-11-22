@@ -129,8 +129,8 @@ dataarc-sdg/
 
 ```shell
 # 1. Clone the repository
-git clone https://github.com/DataArcTech/dataarc-sdg.git
-cd dataarc-sdg
+git clone https://github.com/DataArcTech/DataArc-SynData-Toolkit.git
+cd DataArc-SynData-Toolkit
 
 # 2. Install uv if not already installed
 pip install uv

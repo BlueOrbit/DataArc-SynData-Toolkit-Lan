@@ -129,8 +129,8 @@ dataarc-sdg/
 
 ```shell
 # 1. 克隆项目仓库
-git clone https://github.com/DataArcTech/dataarc-sdg.git
-cd dataarc-sdg
+git clone https://github.com/DataArcTech/DataArc-SynData-Toolkit.git
+cd DataArc-SynData-Toolkit
 
 # 2. 安装uv（如果尚未安装）
 pip install uv
