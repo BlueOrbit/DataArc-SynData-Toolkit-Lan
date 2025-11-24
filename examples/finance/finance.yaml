@@ -38,7 +38,7 @@ task:
       # Output instruction - appended to prompt to guide output format
       output_instruction: |
         Your output should contains thinking process and a single answer, the thinking process should be enclosed within <think> </think>, i.e., <think> thinking process here </think>.
-      num_examples: 5         # number of initial data
+      num_samples: 5         # number of initial data
       temperature: 1.0        # temperature for LLM in initial data generation
 
   # web task configuration

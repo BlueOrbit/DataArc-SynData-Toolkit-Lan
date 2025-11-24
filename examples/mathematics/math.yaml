@@ -37,7 +37,7 @@ task:
       # Output instruction - appended to prompt to guide output format (HOW to solve)
       output_instruction: |
         The output should contain reasoning process step by step and a final answer.
-      num_examples: 5         # number of initial data
+      num_samples: 5         # number of initial data
       temperature: 1.0        # temperature for LLM in initial data generation
 
     # web task configuration

@@ -38,7 +38,7 @@ task:
       # Output instruction - appended to prompt to guide output format (HOW to solve)
       output_instruction: |
         Let's think step by step.
-      num_examples: 10        # number of initial data
+      num_samples: 10        # number of initial data
       temperature: 1.0        # temperature for LLM in initial data generation
 
   # web task configuration
