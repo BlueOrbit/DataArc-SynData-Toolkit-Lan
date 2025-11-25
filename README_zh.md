@@ -114,6 +114,12 @@ dataarc-sdg/
 │   ├── token_counter.py			# 大模型token用量估计
 │   └── utils.py					# 功能组件
 |
+├── train/
+│   ├── datasets/					# 训练数据
+|	|	├── examples/				  # 训练示例
+|	|	├── scripts/				  # 脚本
+|	|	└── verl/			        # VeRL训练模块
+|
 ├── tests/							# 测试套件
 |
 ├── app.py							# 可视化界面
@@ -161,7 +167,14 @@ OPENAI_BASE_URL=https://api.openai.com/v1  # 可选：指定的base url
 uv run sdg configs/example.yaml  # 可以更改为你的.yaml文件
 ```
 
+## :twisted_rightwards_arrows: 使用合成数据进行训练
 
+在datasets/路径准备好你的训练数据。下面是一个使用gsm8k数据集在Qwen2.5-0.5B上进行LoRA微调的示例：
+
+```shell
+cd train
+bash examples/sft/gsm8k/run_qwen_05_peft.sh
+```
 
 ## :desktop_computer: 可视化界面
 

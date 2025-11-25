@@ -114,6 +114,12 @@ dataarc-sdg/
 │   ├── token_counter.py			# token usage estimation
 │   └── utils.py					# other function utils
 |
+├── train/
+│   ├── datasets/					# training datasets
+|	|	├── examples/				  # training examples
+|	|	├── scripts/				  # scripts
+|	|	└── verl/			        # training module by verl
+|
 ├── tests/							# Test Suite
 |
 ├── app.py							# gradio UI
@@ -162,7 +168,14 @@ And run following command.
 uv run sdg configs/example.yaml  # or change to your .yaml file
 ```
 
+## :twisted_rightwards_arrows: Training with Synthesized Data
 
+Prepare your synthesized data at datasets/. Here is an example of LoRA fine-tuning with gsm8k dataset on Qwen2.5-0.5B:
+
+```shell
+cd train
+bash examples/sft/gsm8k/run_qwen_05_peft.sh
+```
 
 ## :desktop_computer: Synthesizing Data with GUI
 
