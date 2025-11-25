@@ -3751,7 +3751,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Task Name</span>
                             </div>
-                            <div class="field-label-info">Name this data generation task, recommend using English and underscores</div>
+                            <div class="field-label-info">Name this synthetic data generation task.</div>
                         """)
                         task_name = gr.Textbox(
                             label="",
@@ -3766,7 +3766,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Domain</span>
                             </div>
-                            <div class="field-label-info">Specify the application domain of the dataset to help generate more professional content</div>
+                            <div class="field-label-info">Specify the domains of the dataset to help generate more relevant content.</div>
                         """)
                         domain = gr.Textbox(
                             label="",
@@ -3781,7 +3781,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Output Directory</span>
                             </div>
-                            <div class="field-label-info">Save path for generated data, the system will create dataset files here</div>
+                            <div class="field-label-info">Save path for generated data, the system will create dataset files here.</div>
                         """)
                         output_dir = gr.Textbox(
                             label="",
@@ -3796,7 +3796,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon">
                                 <span class="field-label-text">CUDA Device</span>
                             </div>
-                            <div class="field-label-info">Specify the CUDA device number for computation, used for parsing, scoring, and evaluation</div>
+                            <div class="field-label-info">Specify the CUDA device used for parsing, scoring, and evaluation.</div>
                         """)
                         cuda_device = gr.Textbox(
                             label="",
@@ -3815,7 +3815,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                                 <span class="field-label-text">Task Type</span>
                             </div>
                             <span style="font-family: 'IBM Plex Sans', sans-serif; font-weight: 400; font-size: 10.5px; line-height: 1.34; letter-spacing: 0.0305em; color: #525252;">
-                                Choose data generation method
+                                Choose synthetic data generation method.
                             </span>
                         </div>
                     """)
@@ -3827,7 +3827,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                                     <span class="iconfont icon-synthetic-Local task-type-icon"></span>
                                     <div class="task-type-content">
                                         <div class="task-type-title">Local</div>
-                                        <div class="task-type-desc">Run on local computer, suitable for small-scale data generation and quick testing</div>
+                                        <div class="task-type-desc">Generate synthetic data based on uploaded documents.</div>
                                     </div>
                                     <div class="task-type-check"></div>
                                 </div>
@@ -3835,7 +3835,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                                     <span class="iconfont icon-synthetic-Web task-type-icon"></span>
                                     <div class="task-type-content">
                                         <div class="task-type-title">Web <span class="coming-soon-badge">Coming Soon</span></div>
-                                        <div class="task-type-desc">Call through web API, supports distributed processing and remote collaboration</div>
+                                        <div class="task-type-desc">Generate synthetic data based on opensource dataset.</div>
                                     </div>
                                     <div class="task-type-check"></div>
                                 </div>
@@ -3843,7 +3843,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                                     <span class="iconfont icon-synthetic-Distill task-type-icon"></span>
                                     <div class="task-type-content">
                                         <div class="task-type-title">Distill</div>
-                                        <div class="task-type-desc">Generate synthetic data through knowledge distillation from large language models</div>
+                                        <div class="task-type-desc">Generate synthetic data through knowledge distillation from large language models.</div>
                                     </div>
                                     <div class="task-type-check"></div>
                                 </div>
@@ -3863,7 +3863,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Task Instruction</span>
                             </div>
-                            <div class="field-label-info">Clearly describe the data you want to generate. This will guide the entire generation process</div>
+                            <div class="field-label-info">Clearly describe the data you want to generate. This will guide the entire generation process.</div>
                         """)
                         task_instruction = gr.Textbox(
                             label="",
@@ -3879,7 +3879,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon">
                                 <span class="field-label-text">Input Instruction</span>
                             </div>
-                            <div class="field-label-info">Specify the input format of the data you want to generate. This will guide the entire generation process</div>
+                            <div class="field-label-info">Specify the input format of the data you want to generate. This will guide the entire generation process.</div>
                         """)
                         input_instruction = gr.Textbox(
                             label="",
@@ -3896,7 +3896,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon">
                                 <span class="field-label-text">Output Instruction</span>
                             </div>
-                            <div class="field-label-info">Specify the expected output format, level of detail, and quality standards</div>
+                            <div class="field-label-info">Specify the expected output format of the data you want to generate. This will guide the entire generation process.</div>
                         """)
                         output_instruction = gr.Textbox(
                             label="",
@@ -3913,7 +3913,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon">
                                 <span class="field-label-text">Answer Extraction</span>
                             </div>
-                            <div class="field-label-info">Configure how answers are extracted from model outputs</div>
+                            <div class="field-label-info">Configure how the final answer is extracted from the output of the data for evaluation.</div>
                         """)
 
                         answer_extraction_tag = gr.Textbox(
@@ -3922,7 +3922,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             value="####",
                             show_label=False,
                             elem_classes=["optional-field"],
-                            info="Tag used to mark the answer in model output"
+                            info="Tag used to mark the final answer in output"
                         )
 
                         answer_extraction_instruction = gr.Textbox(
@@ -3931,7 +3931,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             value="Output your final answer after ####",
                             show_label=False,
                             elem_classes=["optional-field"],
-                            info="Instructions on how to extract the answer"
+                            info="Instructions on the format of final answer in output"
                         )
 
                     # Number of samples
@@ -3940,7 +3940,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Number of samples</span>
                             </div>
-                            <div class="field-label-info">Total number of data samples to generate. It's recommended to start with a small scale for testing</div>
+                            <div class="field-label-info">Total number of data samples to generate. It's recommended to start with a small scale for testing.</div>
                         """)
                         num_samples = gr.Textbox(
                             label="",
@@ -3974,7 +3974,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon">
                                 <span class="field-label-text">Parser Method</span>
                             </div>
-                            <div class="field-label-info">Select how documents should be parsed for local processing</div>
+                            <div class="field-label-info">Select parser to parse local documents.</div>
                         """)
                         parser_method = gr.Dropdown(
                             label="",
@@ -4015,7 +4015,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                                     </span>
                                 </div>
                                 <span style="font-family: 'IBM Plex Sans', sans-serif; font-weight: 400; font-size: 12px; line-height: 1.17; letter-spacing: 0.32px; color: #525252; width: 100%; display: block; overflow: visible; white-space: normal; word-wrap: break-word;">
-                                    Upload JSONL for data generation.
+                                    Upload the expected data demo to guide the data generation.
                                 </span>
                             </div>
                         """)
@@ -4033,7 +4033,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Majority Voting Method</span>
                             </div>
-                            <div class="field-label-info">Number of simpler samples to generate for balancing dataset difficulty</div>
+                            <div class="field-label-info">Method to determine the ground truth when synthesize data using LLM.</div>
                         """)
                         majority_voting_method = gr.Dropdown(
                             label="",
@@ -4048,7 +4048,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Answer Comparison Method</span>
                             </div>
-                            <div class="field-label-info">Provide an access token if you need to use HuggingFace models or datasets</div>
+                            <div class="field-label-info">Method to compare the answer between base model answer and ground truth for evaluation.</div>
                         """)
                         answer_comparison_method = gr.Dropdown(
                             label="",
@@ -4063,7 +4063,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Semantic Model Path</span>
                             </div>
-                            <div class="field-label-info">Specify the path to the semantic model for semantic similarity comparison</div>
+                            <div class="field-label-info">Specify the path to the semantic model for semantic similarity comparison.</div>
                         """)
                         semantic_model_path = gr.Textbox(
                             label="",
@@ -4078,7 +4078,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Dataset Language</span>
                             </div>
-                            <div class="field-label-info">Select the primary language to use for data generation</div>
+                            <div class="field-label-info">Select the language of the output dataset.</div>
                         """)
                         language = gr.Dropdown(
                             label="",
@@ -4093,7 +4093,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                             <div class="field-label-with-icon required">
                                 <span class="field-label-text">Arabic Translator Model Path</span>
                             </div>
-                            <div class="field-label-info">Specify the path to the Arabic translator model for translation tasks</div>
+                            <div class="field-label-info">Specify the path to the translator model for translation.</div>
                         """)
                         translator_model_path = gr.Textbox(
                             label="",
@@ -4151,7 +4151,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                     </div>
                     <p style="margin: 0; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; font-weight: 400; line-height: 1.33; color: #525252;">Manage LLM model configuration and basic parameters.</p>
                 </div>
-                <button id="drawer_close" aria-label="关闭设置">×</button>
+                <button id="drawer_close" aria-label="close settings">×</button>
             </div>
             """
         )
@@ -4181,7 +4181,8 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
             llm_api_key = gr.Textbox(
                 label="API Key",
                 placeholder="API Key String",
-                type="password"
+                type="password",
+                info="Your API KEY to access the model"
             )
             llm_base_url = gr.Textbox(
                 label="Base URL (Optional)",
@@ -4205,7 +4206,7 @@ with gr.Blocks(title="DataArc SDG - Synthetic Data Generator", theme=gr.themes.S
                 label="Base Model Path",
                 value="Qwen/Qwen2.5-7B",
                 placeholder="Qwen/Qwen2.5-7B",
-                info="Path to the local model file."
+                info="Specify path for local model file."
             )
 
         # Drawer Footer
