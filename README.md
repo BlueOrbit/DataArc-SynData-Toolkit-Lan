@@ -41,6 +41,8 @@ A few lines of code deliver over 20% performance improvements.
 
 [25/11/17] We open-sourced our synthetic data platform.
 
+[25/11/27] We added parallel processing module to significantly accelerate the synthetic data generation pipeline.
+
 > [!TIP]
 >
 > If you cannot use the latest feature, please pull the latest code.
