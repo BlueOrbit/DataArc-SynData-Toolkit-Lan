@@ -3177,6 +3177,10 @@ def create_config_dict(
             "task_type": task_type.lower() if task_type else "local",  # Convert to lowercase: Local -> local, Web -> web, Cloud -> cloud
             "name": task_name or "custom_task",
             "domain": domain or "general",
+            "task_instruction": task_instruction,
+            "input_instruction": input_instruction,
+            "output_instruction": output_instruction,
+            "num_samples": num_samples,
         },
         "llm": {
             "provider": llm_provider,
@@ -3229,8 +3233,6 @@ def create_config_dict(
         },
         "rewrite": {
             "method": "difficulty_adjust",
-            "input_instruction": input_instruction,
-            "output_instruction": output_instruction,
             "difficulty_adjust": {
                 "easier_temperature": 0.9,
                 "harder_temperature": 1.1
@@ -3287,21 +3289,14 @@ def create_config_dict(
                 "top_k": 10000
             },
             "generation": {
-                "task_instruction": task_instruction,
-                "input_instruction": input_instruction,
-                "output_instruction": output_instruction,
-                "num_samples": num_samples,
+                "batch_size": 5,
                 "temperature": 1.0
             }
         }
 
     elif task_type_lower == "web":
         config["task"]["web"] = {
-            "task_instruction": task_instruction,
-            "input_instruction": input_instruction,
-            "output_instruction": output_instruction,
             "dataset_limit": 1,
-            "num_samples": num_samples,
             "dataset_score_threshold": dataset_score_threshold
         }
         if hf_token:
@@ -3309,10 +3304,6 @@ def create_config_dict(
 
     elif task_type_lower == "distill":
         config["task"]["distill"] = {
-            "task_instruction": task_instruction,
-            "input_instruction": input_instruction,
-            "output_instruction": output_instruction,
-            "num_samples": num_samples,
             "batch_size": 5,
             "temperature": 1.0
         }

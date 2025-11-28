@@ -1,6 +1,6 @@
 import os
 import yaml
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
 from .constants import *
@@ -21,6 +21,9 @@ class BaseTaskConfig(BaseConfig):
     """Base class of task configuration"""
     name: str = Field(..., description="Name of task")
     task_instruction: str = Field(..., description="task description")
+    input_instruction: str = Field(default=None, description="input instruction")
+    output_instruction: str = Field(default=None, description="output instruction")
+    num_samples: int = Field(..., gt=0, description="number of samples to generate")
     domain: str = Field(default=None, description="Domain of task")
     demo_examples_path: Optional[str] = Field(default=None, description="Path of demo examples for synthetic data.")
 
@@ -39,9 +42,9 @@ class RetrievalConfig(BaseConfig):
 
 class GenerationConfig(BaseConfig):
     """Configuration for data generation"""
-    input_instruction: str = Field(..., description="input instruction")
-    output_instruction: str = Field(..., description="output instruction")
-    num_samples: int = Field(..., gt=0, description="number of initial data")
+    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
+    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
+    num_samples: int = Field(default=None, gt=0, description="number of samples (inherited from task config)")
     batch_size: int = Field(default=5, gt=0, description="batch size for sample generation")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
@@ -58,29 +61,27 @@ class LocalTaskConfig(BaseTaskConfig):
     @classmethod
     def from_dict(cls, config: Dict) -> "LocalTaskConfig":
         try:
-            generation_config_dict: Dict = config["generation"]
-            config["task_instruction"] = generation_config_dict["task_instruction"]
+            # Inject task-level config into generation config
+            generation_config_dict: Dict = config.get("generation", {})
+            if config.get("input_instruction"):
+                generation_config_dict["input_instruction"] = config["input_instruction"]
+            if config.get("output_instruction"):
+                generation_config_dict["output_instruction"] = config["output_instruction"]
+            if config.get("num_samples"):
+                generation_config_dict["num_samples"] = config["num_samples"]
+            config["generation"] = generation_config_dict
             instance = cls(**config)
         except Exception as e:
             raise Exception(f"Error occured when parsing configuration of local task: {str(e)}")
 
         return instance
 
-    def update(self, config: Dict):
-        if "generation" in config:
-            if "task_instruction" in config["generation"]:
-                self.task_instruction = config["generation"]["task_instruction"]
-        super().update(config)
-
 
 # Configuration for web task
 class WebTaskConfig(BaseTaskConfig):
     """Task Configuration of crawling from huggingface"""
     huggingface_token: str = Field(default=os.environ.get("HUGGINGFACE_TOKEN", None), description="huggingface token")
-    input_instruction: str = Field(..., description="input instruction")
-    output_instruction: str = Field(..., description="output instruction")
     dataset_limit: int = Field(default=1, gt=0, description="number of datasets to crawl per keyword")
-    num_samples: int = Field(..., gt=0, description="number of samples to output in final dataset")
     dataset_score_threshold: int = Field(default=30, ge=0, description="minimum overall score (sum of 5 criteria) for a dataset to be valid")
 
     @classmethod
@@ -93,12 +94,9 @@ class WebTaskConfig(BaseTaskConfig):
         return instance
 
 
-# Configuration for distll task
+# Configuration for distill task
 class DistillTaskConfig(BaseTaskConfig):
-    """Task Configuration of model distll"""
-    input_instruction: str = Field(default=None, description="input format instruction")
-    output_instruction: str = Field(default=None, description="output format instruction")
-    num_samples: int = Field(..., gt=0, description="number of samples to generate")
+    """Task Configuration of model distill"""
     batch_size: int = Field(default=5, gt=0, description="batch size for generation")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
@@ -129,10 +127,18 @@ class SDGSTaskConfig(BaseConfig):
         name: str = config.get("name", DEFAULT_TASK_NAME)
         domain: str = config.get("domain", None)
         demo_examples_path: str = config.get("demo_examples_path", None)
+        task_instruction: str = config.get("task_instruction", None)
+        input_instruction: str = config.get("input_instruction", None)
+        output_instruction: str = config.get("output_instruction", None)
+        num_samples: int = config.get("num_samples", None)
         global_config_dict = {
             "name": name,
             "domain": domain,
-            "demo_examples_path": demo_examples_path
+            "demo_examples_path": demo_examples_path,
+            "task_instruction": task_instruction,
+            "input_instruction": input_instruction,
+            "output_instruction": output_instruction,
+            "num_samples": num_samples,
         }
 
         # Use explicitly set task_type if provided, otherwise auto-detect
@@ -162,10 +168,18 @@ class SDGSTaskConfig(BaseConfig):
             global_config_dict["domain"] = config["domain"]
         if "demo_examples_path" in config:
             global_config_dict["demo_examples_path"] = config["demo_examples_path"]
+        if "task_instruction" in config:
+            global_config_dict["task_instruction"] = config["task_instruction"]
+        if "input_instruction" in config:
+            global_config_dict["input_instruction"] = config["input_instruction"]
+        if "output_instruction" in config:
+            global_config_dict["output_instruction"] = config["output_instruction"]
+        if "num_samples" in config:
+            global_config_dict["num_samples"] = config["num_samples"]
 
         if self.local_task_config:
             self.local_task_config.update({**global_config_dict, **config.get("local", {})})
-        
+
         if self.web_task_config:
             self.web_task_config.update({**global_config_dict, **config.get("web", {})})
 
@@ -398,15 +412,16 @@ class LLMJudgeComparisonConfig(BaseComparisonConfig):
 class EvaluationConfig(BaseConfig):
     """Configuration for evaluation"""
     batch_size: int = Field(...)
-    input_instruction: str = Field(default=None)
-    output_instruction: str = Field(default=None)
+    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
+    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
     answer_comparison_config: BaseComparisonConfig = Field(default=ExactMatchComparisonConfig(method="exact_match"))
 
     @classmethod
     def from_dict(cls, config: Dict) -> "EvaluationConfig":
         answer_comparison_config = BaseComparisonConfig.from_dict(config["answer_comparison"])
         total_config = {**config, **{"answer_comparison_config": answer_comparison_config}}
-        return cls(**total_config)
+        instance = cls(**total_config)
+        return instance
 
     def update(self, config: Dict):
         answer_comparison_config_dict = config.get("answer_comparison", {})
@@ -418,21 +433,24 @@ class EvaluationConfig(BaseConfig):
 # Configuration for Rewrite
 class BaseRewriteConfig(BaseConfig):
     method: str = Field(default=DEFAULT_REWRITE_METHOD)
-    input_instruction: str = Field(...)
-    output_instruction: str = Field(...)
+    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
+    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
 
     @staticmethod
     def from_dict(config: Dict) -> "BaseRewriteConfig":
+        import logging
+        logger = logging.getLogger(__name__)
         try:
             method = config["method"]
             addition_config = config.get(method, {})
             total_config = {**config, **addition_config}
         except Exception as e:
             raise Exception(f"Error occured when parsing configuration of rewrite: {str(e)}")
-        
+
         # get specific config according to method
         if method == "difficulty_adjust":
-            return DifficultyAdjustRewriteConfig(**total_config)
+            instance = DifficultyAdjustRewriteConfig(**total_config)
+            return instance
 
         raise Exception(f"Error occured when parsing configuration of rewrite: method {method} is not supported for rewrite.")
 
@@ -485,7 +503,7 @@ class SDGSConfig(BaseConfig):
         """Load configuration from a YAML file."""
         try:
             with open(yaml_path, encoding="utf-8") as fr:
-                config_dict = yaml.safe_load(fr)
+                config_dict = yaml.safe_load(fr)    
         except FileNotFoundError as e:
             raise Exception(f"not found: {yaml_path}")
         except yaml.YAMLError as e:
@@ -513,8 +531,24 @@ class SDGSConfig(BaseConfig):
 
         answer_config = AnswerExtractionConfig(**config_dict["answer_extraction"])
         postprocess_config = PostProcessConfig.from_dict(config_dict["postprocess"])
-        evaluation_config = EvaluationConfig.from_dict(config_dict["evaluation"])
-        rewrite_config = BaseRewriteConfig.from_dict(config_dict["rewrite"])
+
+        # Get instructions from task-level config
+        task_dict = config_dict["task"]
+        input_instruction = task_dict.get("input_instruction")
+        output_instruction = task_dict.get("output_instruction")
+
+        # Inject instructions into evaluation config dict before parsing
+        evaluation_config_dict = config_dict["evaluation"].copy()
+        evaluation_config_dict["input_instruction"] = input_instruction
+        evaluation_config_dict["output_instruction"] = output_instruction
+        evaluation_config = EvaluationConfig.from_dict(evaluation_config_dict)
+
+        # Inject instructions into rewrite config dict before parsing
+        rewrite_config_dict = config_dict["rewrite"].copy()
+        rewrite_config_dict["input_instruction"] = input_instruction
+        rewrite_config_dict["output_instruction"] = output_instruction
+        rewrite_config = BaseRewriteConfig.from_dict(rewrite_config_dict)
+
         translation_config = TranslationConfig.from_dict(config_dict.get("translation", {}))
 
         return cls(
