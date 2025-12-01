@@ -16,17 +16,17 @@ task:
   demo_examples_path: /path/to/your/demo_examples.jsonl  # path for demo examples .jsonl file (Optional)
   task_type: local
 
-  # Task instruction used for data generation (shared across all task types)
+  # Task instruction used for data generation
   task_instruction: |
     Generate a grade school math word problem that requires multi-step reasoning.
     The problem should involve basic arithmetic operations and have a clear numerical answer.
-  # Input instruction - prepended to model input during inference (shared across all task types)
+  # Input instruction - prepended to model input during inference
   input_instruction: |
     The input should be a math word problem that requires multi-step reasoning.
-  # Output instruction - appended to prompt to guide output format (shared across all task types)
+  # Output instruction - appended to prompt to guide output format
   output_instruction: |
     The output should contain reasoning process step by step.
-  # Number of samples to generate (shared across all task types)
+  # Number of samples to generate
   num_samples: 10
 
   # local task configuration
@@ -34,7 +34,7 @@ task:
     # Parsing Configuration
     parsing:
       # Directions to document corpora
-      document_dir: ./dataset/documents
+      document_dir: /path/to/your/document_dir
       method: mineru  # default to mineru parser
 
     # Retrieval Configuration
@@ -49,7 +49,7 @@ task:
   # web task configuration
   web:
     huggingface_token: "hf_"        # optional. This parameter can be set by 'export HUGGINGFACE_TOKEN="YOUR TOKEN"'
-    dataset_score_threshold: 30     # minimum overall score (sum of 5 criteria) for a dataset to be valid
+    dataset_score_threshold: 30  # minimum overall score (sum of 5 criteria) for a dataset to be valid
 
   # distill task configuration
   distill:
@@ -72,7 +72,7 @@ base_model:
   # Sampling parameters for scoring (pass@n evaluation)
   scoring:
     temperature: 1.2
-    n: 4
+    n: 8
 
 # LLM used throughout the pipeline (Create .env file to specified base url and api key)
 llm:
