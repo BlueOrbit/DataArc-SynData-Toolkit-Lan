@@ -127,7 +127,7 @@ class DataGenerator(BaseGenerator):
                         usage_counter_gen.estimate_usage(n=1)  # track per-batch completion to match buffer
                     if buffer_gen:
                         buffer_gen.add_progress([sample_idx])
-                        buffer_gen.save(string_batches, usage_counter)
+                        buffer_gen.save(string_batches, usage_counter_gen)
 
         sample_strings: List[str] = []
         for batch in string_batches:
