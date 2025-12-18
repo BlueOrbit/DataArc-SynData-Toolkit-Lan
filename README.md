@@ -12,7 +12,7 @@
 
 ## :dart: Project Overview
 
-**DataArc SynData Toolkit** is a synthetic data generation toolkit developed and open-sourced by DataArc. It enables users to generate customized training data in one step through simple configuration files based on their requirements.
+**DataArc SynData Toolkit** is a synthetic data generation toolkit developed and open-sourced by DataArc (https://www.dataarctech.com/) and International Digital Economy Academy (https://www.idea.edu.cn/). It enables users to generate customized training data in one step through simple configuration files based on their requirements.
 
 
 
