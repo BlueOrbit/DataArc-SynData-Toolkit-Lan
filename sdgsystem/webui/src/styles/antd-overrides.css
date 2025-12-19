@@ -1,0 +1,123 @@
+/**
+ * Ant Design 样式微调
+ * 使用更高优先级覆盖特定样式
+ */
+
+/* Header 导航 Tabs 按钮样式 */
+.header-button-tabs.ant-tabs .ant-tabs-nav::before {
+  border-bottom: none;
+}
+
+.header-button-tabs.ant-tabs .ant-tabs-tab {
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 6px 16px;
+  margin: 0 4px;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.header-button-tabs.ant-tabs .ant-tabs-tab:hover {
+  color: #1D1B4A;
+  background: #F2F3F5;
+  opacity: 0.7;
+}
+
+.header-button-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active {
+  background: #F2F3F5;
+  border: 1px solid #DADADA;
+  opacity: 1;
+}
+
+.header-button-tabs.ant-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #1D1B4A;
+  font-weight: 600;
+}
+
+.header-button-tabs.ant-tabs .ant-tabs-ink-bar {
+  display: none;
+}
+
+/* Process Chain Step Item 闪烁动画 */
+@keyframes blink {
+  0% {
+    background-position-x: 100%;
+    background-position-y: 100%;
+  }
+  100% {
+    background-position-x: -100%;
+    background-position-y: 100%;
+  }
+}
+
+/* ThoughtChain 组件样式调整 */
+.ant-thought-chain-node-box {
+  width: 100%;
+}
+
+.ant-thought-chain-node-title.ant-thought-chain-node-collapsible {
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* Custom Upload 文件卡片 hover 效果 */
+.custom-upload-file-item {
+  transition: box-shadow 0.3s;
+}
+
+.custom-upload-file-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Custom Upload 关闭按钮 hover 效果 */
+.custom-upload-remove-btn {
+  transition: color 0.3s;
+}
+
+.custom-upload-remove-btn:hover {
+  color: rgba(0, 0, 0, 0.88) !important;
+}
+
+/* Custom Upload 上传区域 */
+.custom-upload-dragger {
+  transition: all 0.3s;
+  /* Reset button default styles */
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.custom-upload-dragger:hover {
+  border-color: var(--ant-color-primary-hover) !important;
+  opacity: 0.8;
+}
+
+.custom-upload-dragger:active {
+  opacity: 0.9;
+}
+
+/* Optional Prompt Collapse 样式 */
+.optional-prompt-collapse .ant-collapse-header {
+  transition: border-radius 0.3s;
+}
+
+/* 展开状态：header 只保留顶部圆角 */
+.optional-prompt-collapse .ant-collapse-item-active .ant-collapse-header {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-bottom: none !important;
+}
+
+/* Rectangular Switch Override */
+.rectangular-switch.ant-switch {
+  border-radius: 4px;
+}
+
+.rectangular-switch.ant-switch .ant-switch-inner {
+  border-radius: 4px;
+}
+
+.rectangular-switch.ant-switch .ant-switch-handle::before {
+  border-radius: 4px;
+}

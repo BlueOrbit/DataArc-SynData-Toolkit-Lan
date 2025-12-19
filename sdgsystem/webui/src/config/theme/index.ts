@@ -1,0 +1,5 @@
+export type { ThemeConfig } from 'antd'
+export { componentConfig } from './components'
+export { darkTheme } from './themes/dark'
+export { lightTheme } from './themes/light'
+export { darkTokens, lightTokens } from './tokens'
