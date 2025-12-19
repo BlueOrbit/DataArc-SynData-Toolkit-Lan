@@ -10,7 +10,6 @@ from .utils import load_json, save_json
 from .models import ModelUsageCounter
 
 
-
 class TaskBuffer:
     def __init__(self,  
         total: int, 
@@ -60,6 +59,9 @@ class TaskBuffer:
             self.tmp_add_progress.extend(idxs)
 
     def load(self, usage_counter: ModelUsageCounter = None) -> Iterable[Any]:
+        # save the original total from __init__ before loading
+        original_total = self.usage["total"]
+
         # load progress
         try:
             usage: dict = load_json(self.usage_path)
@@ -70,11 +72,15 @@ class TaskBuffer:
             if self.detail_completed != self.usage["completed"]:
                 raise Exception(f"Error occurred when load buffer: completed={self.usage['completed']} is not equal to completed in detail_progress={self.detail_completed}")
             self.tmp_add_progress = []
-            
+
             if usage_counter:
                 usage_counter.load_from_dict(usage)
         except:
             pass
+
+        # resize detail_progress to match the current total if different from loaded total
+        if original_total != self.usage["total"]:
+            self.resize_total(original_total)
         # load results
         results: Iterable[Any] = []
         try:

@@ -99,7 +99,6 @@ class BaseComparison(ABC):
         usage_counter: ModelUsageCounter = None, 
     ) -> bool:
         st = time.time()
-        # Strip whitespace
         pred = predicted.strip()
         gt = ground_truth.strip()
 
@@ -154,7 +153,7 @@ class SemanticComparison(BaseComparison):
     def __init__(self, config: SemanticComparisonConfig) -> None:
         super(SemanticComparison, self).__init__(config)
         self.config: SemanticComparisonConfig
-        self.model = None  # Lazy load on first use
+        self.model = None
 
     def compare(self, 
         predicted: str, 
@@ -181,7 +180,6 @@ class SemanticComparison(BaseComparison):
         """
         st = time.time()
         try:
-            # Lazy load model on first use
             if self.model is None:
                 from sentence_transformers import SentenceTransformer
                 device = self.config.device

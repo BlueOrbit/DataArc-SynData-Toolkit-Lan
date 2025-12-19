@@ -10,7 +10,7 @@ from typing import List, Dict, Tuple
 import logging
 from tqdm import tqdm
 
-from ..configs.config import EvaluationConfig, BaseComparisonConfig
+from ..configs.config import EvaluationConfig
 from ..dataset.dataset import Dataset
 from ..models import ModelClient, ModelUsageCounter
 from .answer_comparison import AnswerComparer
@@ -37,54 +37,33 @@ class Evaluator:
         self,
         base_model: ModelClient,
         llm: ModelClient,
-        input_instruction: str,
-        output_instruction: str,
-        comparison_config: BaseComparisonConfig
+        config: EvaluationConfig
     ):
         """
         Initialize the evaluator.
 
         Args:
             base_model: BaseModel instance for inference
-            input_instruction: Instruction prepended to model input
-            output_instruction: Instruction for output format
-            answer_config: AnswerExtractionConfig instance
-            comparison_config: AnswerComparisonConfig instance
+            llm: LLM client for answer comparison (if using llm_judge)
+            config: EvaluationConfig with all evaluation settings
         """
         self.base_model = base_model
-        self.input_instruction = input_instruction
-        self.output_instruction = output_instruction
+        self.input_instruction = config.input_instruction
+        self.output_instruction = config.output_instruction
+        self.inference_config = config.inference
+        self.scoring_config = config.scoring
         self.answer_comparer = AnswerComparer(
-            config=comparison_config,
+            config=config.answer_comparison_config,
             llm=llm.get_model() if llm is not None else None
         )
 
-    @classmethod
-    def from_config(cls, base_model: ModelClient, llm: ModelClient, config: EvaluationConfig):
-        """
-        Create evaluator from configuration object.
-
-        Args:
-            base_model: BaseModel instance
-            config: Config instance with evaluation settings
-
-        Returns:
-            Evaluator instance
-        """
-        return cls(
-            base_model=base_model,
-            llm=llm,
-            input_instruction=config.input_instruction,
-            output_instruction=config.output_instruction,
-            comparison_config=config.answer_comparison_config
-        )
-
-    def evaluate(self, dataset: Dataset, **kwargs) -> Dict:
+    def evaluate(self, dataset: Dataset, mode: str = "inference") -> Dict:
         """
         Evaluate, filter, and split samples from dataset
 
         Args:
             dataset: Dataset, samples with 'input' and 'output' keys
+            mode: "inference" for binary evaluation (n=1) or "scoring" for pass@n
 
         Returns:
             Evaluation results of dataset, e.g.:
@@ -93,21 +72,36 @@ class Evaluator:
             }
             i is the index of sample in dataset
         """
-        # intialize the usage counter for evaluator
-        # estimate the token and time usage with each batch of samples
-        usage_counter = ModelUsageCounter(total=len(dataset), name="Evaluator")  
+        config = self.inference_config if mode == "inference" else self.scoring_config
 
-        evaluated_samples = self.evaluate_samples(dataset.samples, usage_counter, **kwargs)
-        evaluations: Dict[str, List] = {
-            "scores": [s for s, _ in evaluated_samples]
-        }
-        return evaluations
+        usage_counter = ModelUsageCounter(total=len(dataset), name="Evaluator")
+
+        evaluated_samples = self.evaluate_samples(
+            dataset.samples,
+            usage_counter,
+            temperature=config.temperature,
+            max_tokens=config.max_tokens,
+            n=config.n
+        )
+        scores = [s for s, _ in evaluated_samples]
+
+        # Log scoring summary
+        total = len(scores)
+        if total > 0:
+            solved = sum(1 for s in scores if s == 1.0)
+            learnable = sum(1 for s in scores if 0 < s < 1.0)
+            unsolved = sum(1 for s in scores if s == 0.0)
+            logger.info(f"Evaluation Summary ({mode}): Total={total}, "
+                       f"Solved={solved} ({solved/total*100:.1f}%), "
+                       f"Learnable={learnable} ({learnable/total*100:.1f}%), "
+                       f"Unsolved={unsolved} ({unsolved/total*100:.1f}%)")
+
+        return {"scores": scores}
 
     def evaluate_samples(
         self,
-        samples: List[Dict[str, str]], 
-        usage_counter: ModelUsageCounter = None, 
-        batch_size: int = 100,
+        samples: List[Dict[str, str]],
+        usage_counter: ModelUsageCounter = None,
         temperature: float = 0.0,
         max_tokens: int = 1500,
         n: int = 1
@@ -115,17 +109,9 @@ class Evaluator:
         """
         Evaluate samples by running inference and comparing with ground truth.
 
-        This method:
-        1. Builds prompts from samples
-        2. Runs batch inference with n samples per prompt
-        3. Extracts answers from predictions
-        4. Compares with ground truth
-        5. Calculates score = correct_count / n
-        6. Returns (score, sample_with_details) tuples
-
         Args:
             samples: List of samples with 'input' and 'output' keys
-            batch_size: Batch size for inference
+            usage_counter: Counter for time tracking
             temperature: Sampling temperature (0.0 for deterministic)
             max_tokens: Maximum tokens to generate
             n: Number of responses to generate per sample
@@ -137,114 +123,57 @@ class Evaluator:
 
             Note: When n=1, score will be either 0.0 or 1.0
         """
-        results = []
+        # Build all prompts
+        prompts = [self._build_prompt(sample['input']) for sample in samples]
 
-        # Process in batches
-        num_batches = (len(samples) + batch_size - 1) // batch_size
-
-        # Determine description based on n
+        # Run inference - vLLM handles batching internally
         desc = "Evaluating samples" if n == 1 else f"Scoring samples (n={n})"
+        logger.info(f"{desc}: {len(samples)} samples")
 
-        with tqdm(total=len(samples), desc=desc, unit="sample") as pbar:
-            for batch_idx in range(num_batches):
-                start_idx = batch_idx * batch_size
-                end_idx = min((batch_idx + 1) * batch_size, len(samples))
-                batch = samples[start_idx:end_idx]
+        predictions = self.base_model.generate(
+            prompts,
+            n=n,
+            usage_counter=usage_counter,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
 
-                if not batch:
-                    continue
+        # Track time after inference
+        if usage_counter:
+            usage_counter.estimate_usage(n=len(samples))
 
-                # Build prompts
-                batch_prompts = [
-                    self._build_prompt(sample['input'])
-                    for sample in batch
-                ]
+        # Evaluate each sample
+        results = []
+        for sample, responses in tqdm(zip(samples, predictions), total=len(samples), desc="Comparing answers"):
+            ground_truth = sample['output']
 
-                # Run inference with n responses per sample
-                predictions = self.base_model.generate(
-                    batch_prompts,
-                    n=n,
-                    usage_counter=usage_counter,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
+            # Ensure responses is a list
+            if not isinstance(responses, list):
+                responses = [responses]
 
-                # Evaluate each sample
-                for sample, responses in zip(batch, predictions):
-                    ground_truth = sample['output']
+            # Evaluate each of the n responses
+            eval_results = [
+                self._evaluate_single(sample['input'], ground_truth, pred)
+                for pred in responses
+            ]
 
-                    # Ensure responses is a list
-                    if not isinstance(responses, list):
-                        responses = [responses]
+            # Calculate score as average
+            score = sum(eval_results) / len(eval_results)
 
-                    # Evaluate each of the n responses
-                    eval_results = []
-                    for pred in responses:
-                        is_correct = self._evaluate_single(
-                            sample['input'],
-                            ground_truth,
-                            pred
-                        )
-                        eval_results.append(is_correct)
+            # Store correct predictions
+            correct_preds = [pred for pred, res in zip(responses, eval_results) if res]
 
-                    # Calculate score as average
-                    score = sum(eval_results) / len(eval_results)
+            # Create sample with score info
+            sample_with_score = {
+                **sample,
+                'score': score,
+                'correct_predictions': correct_preds,
+                'all_predictions': responses
+            }
 
-                    # Store correct predictions
-                    correct_preds = [pred for pred, res in zip(responses, eval_results) if res]
-
-                    # Create sample with score info
-                    sample_with_score = {
-                        **sample,
-                        'score': score,
-                        'correct_predictions': correct_preds,
-                        'all_predictions': responses
-                    }
-
-                    results.append((score, sample_with_score))
-
-                    # Update progress bar with status in postfix
-                    if n == 1:
-                        status = "✓" if score == 1 else "✗"
-                    else:
-                        status = "✓" if score == 1 else "◐" if score > 0 else "✗"
-
-                    pbar.set_postfix_str(f"Last: {status}")
-                    pbar.update(1)
-
-                # estimate the token and time usage for each batch
-                if usage_counter:
-                    usage_counter.estimate_usage(n=len(batch))
+            results.append((score, sample_with_score))
 
         return results
-
-    @staticmethod
-    def print_scoring_summary(
-        solved: List[Dict],
-        learnable: List[Dict],
-        unsolved: List[Dict]
-    ):
-        """
-        Print a summary of scoring results.
-
-        Args:
-            solved: List of solved samples (score == 1.0)
-            learnable: List of learnable samples (0 < score < 1.0)
-            unsolved: List of unsolved samples (score == 0.0)
-        """
-        total = len(solved) + len(learnable) + len(unsolved)
-
-        if total == 0:
-            logger.warning("No samples to summarize")
-            return
-
-        logger.info(f"\n{'='*60}")
-        logger.info("Scoring Summary:")
-        logger.info(f"  Total samples: {total}")
-        logger.info(f"  Solved (score==1.0): {len(solved)} ({len(solved)/total*100:.1f}%)")
-        logger.info(f"  Learnable (0<score<1): {len(learnable)} ({len(learnable)/total*100:.1f}%)")
-        logger.info(f"  Unsolved (score==0.0): {len(unsolved)} ({len(unsolved)/total*100:.1f}%)")
-        logger.info(f"{'='*60}\n")
 
     def _build_prompt(self, sample_input: str) -> str:
         """
@@ -258,11 +187,11 @@ class Evaluator:
         """
         prompt = str(sample_input)
 
-        # Use format_prompts to combine output_instruction with answer_config
-        if self.output_instruction:
-            formatted_instruction = self.base_model.answer_extractor.format_prompts(
-                self.output_instruction
-            )
+        # Use format_prompts to combine output_instruction with answer_instruction
+        formatted_instruction = self.base_model.answer_extractor.format_prompts(
+            self.output_instruction
+        )
+        if formatted_instruction:
             prompt += " " + formatted_instruction
 
         return prompt
@@ -294,19 +223,10 @@ class Evaluator:
         pred_extracted = pred_answer is not None
 
         # Decision logic: if both succeed, compare extracted; if either fails, compare full texts
-        if gt_extracted and pred_extracted:
-            # Both extractions succeeded - compare extracted answers
-            logger.debug(f"Both extracted - GT: {gt_answer}, Pred: {pred_answer}")
-        else:
+        if not gt_extracted or not pred_extracted:
             # At least one extraction failed - compare full texts for fairness
-            gt_answer = ground_truth.strip()
-            pred_answer = prediction.strip()
-            if not gt_extracted and not pred_extracted:
-                logger.debug(f"Both extraction failed - comparing full texts")
-            elif not gt_extracted:
-                logger.debug(f"GT extraction failed - comparing full texts")
-            else:  # not pred_extracted
-                logger.debug(f"Prediction extraction failed - comparing full texts")
+            gt_answer = str(ground_truth).strip() if ground_truth is not None else ""
+            pred_answer = str(prediction).strip() if prediction is not None else ""
 
         # Compare answers using configured method
         is_correct = self.answer_comparer.compare_answers(

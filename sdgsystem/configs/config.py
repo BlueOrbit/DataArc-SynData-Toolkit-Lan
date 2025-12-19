@@ -21,9 +21,10 @@ class BaseTaskConfig(BaseConfig):
     """Base class of task configuration"""
     name: str = Field(..., description="Name of task")
     task_instruction: str = Field(..., description="task description")
-    input_instruction: str = Field(default=None, description="input instruction")
-    output_instruction: str = Field(default=None, description="output instruction")
+    input_instruction: Optional[str] = Field(default="", description="input instruction")
+    output_instruction: Optional[str] = Field(default="", description="output instruction")
     num_samples: int = Field(..., gt=0, description="number of samples to generate")
+    batch_size: int = Field(default=5, gt=0, description="batch size for generation")
     domain: str = Field(default=None, description="Domain of task")
     demo_examples_path: Optional[str] = Field(default=None, description="Path of demo examples for synthetic data.")
 
@@ -42,8 +43,8 @@ class RetrievalConfig(BaseConfig):
 
 class GenerationConfig(BaseConfig):
     """Configuration for data generation"""
-    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
-    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
+    input_instruction: Optional[str] = Field(default="", description="input instruction (inherited from task config)")
+    output_instruction: Optional[str] = Field(default="", description="output instruction (inherited from task config)")
     num_samples: int = Field(default=None, gt=0, description="number of samples (inherited from task config)")
     batch_size: int = Field(default=5, gt=0, description="batch size for sample generation")
     temperature: float = Field(
@@ -69,6 +70,8 @@ class LocalTaskConfig(BaseTaskConfig):
                 generation_config_dict["output_instruction"] = config["output_instruction"]
             if config.get("num_samples"):
                 generation_config_dict["num_samples"] = config["num_samples"]
+            if config.get("batch_size"):
+                generation_config_dict["batch_size"] = config["batch_size"]
             config["generation"] = generation_config_dict
             instance = cls(**config)
         except Exception as e:
@@ -97,7 +100,6 @@ class WebTaskConfig(BaseTaskConfig):
 # Configuration for distill task
 class DistillTaskConfig(BaseTaskConfig):
     """Task Configuration of model distill"""
-    batch_size: int = Field(default=5, gt=0, description="batch size for generation")
     temperature: float = Field(
         default=DEFAULT_TEMPERATURE,
         gt=0.,
@@ -128,9 +130,10 @@ class SDGSTaskConfig(BaseConfig):
         domain: str = config.get("domain", None)
         demo_examples_path: str = config.get("demo_examples_path", None)
         task_instruction: str = config.get("task_instruction", None)
-        input_instruction: str = config.get("input_instruction", None)
-        output_instruction: str = config.get("output_instruction", None)
+        input_instruction: str = config.get("input_instruction") or ""
+        output_instruction: str = config.get("output_instruction") or ""
         num_samples: int = config.get("num_samples", None)
+        batch_size: int = config.get("batch_size", None)
         global_config_dict = {
             "name": name,
             "domain": domain,
@@ -139,6 +142,7 @@ class SDGSTaskConfig(BaseConfig):
             "input_instruction": input_instruction,
             "output_instruction": output_instruction,
             "num_samples": num_samples,
+            "batch_size": batch_size,
         }
 
         # Use explicitly set task_type if provided, otherwise auto-detect
@@ -176,6 +180,8 @@ class SDGSTaskConfig(BaseConfig):
             global_config_dict["output_instruction"] = config["output_instruction"]
         if "num_samples" in config:
             global_config_dict["num_samples"] = config["num_samples"]
+        if "batch_size" in config:
+            global_config_dict["batch_size"] = config["batch_size"]
 
         if self.local_task_config:
             self.local_task_config.update({**global_config_dict, **config.get("local", {})})
@@ -202,8 +208,6 @@ class LocalModelConfig(BaseConfig):
     device: str = Field(default="cuda:0", description="CUDA device (e.g., 'cuda:0')")
     max_model_len: int = Field(default=DEFAULT_LOCAL_MODEL_LEN, description="max model length")
     gpu_memory_utilization: float = Field(default=DEFAULT_GPU_UTILIZATION, description="gpu memory utilization")
-    inference: InferenceConfig = Field(default=InferenceConfig())
-    scoring: InferenceConfig = Field(default=InferenceConfig())
 
     @classmethod
     def from_dict(cls, config: Dict) -> "LocalModelConfig":
@@ -366,7 +370,7 @@ class PostProcessConfig(BaseConfig):
             else:
                 self.configs[method] = BasePostProcessConfig.from_dict(method_config_dict, method)
 
-# Configuration for Evaluaiton
+# Configuration for Evaluation
 class BaseComparisonConfig(BaseConfig):
     """Base Configuration for answer comparison method"""
     method: str = Field(default=DEFAULT_COMPARISON_METHOD)
@@ -402,7 +406,7 @@ class ExactMatchComparisonConfig(BaseComparisonConfig):
     numeric_tolerance: float = Field(default=1e-3)
 
 class SemanticComparisonConfig(BaseComparisonConfig):
-    model_path: str = Field(default="BAAI/bge-large-zh-v1.5")
+    model_path: str = Field(default="BAAI/bge-m3")
     device: str = Field(default="cuda:0", description="CUDA device (e.g., 'cuda:0')")
     similarity_threshold: float = Field(default=0.85)
 
@@ -412,9 +416,11 @@ class LLMJudgeComparisonConfig(BaseComparisonConfig):
 class EvaluationConfig(BaseConfig):
     """Configuration for evaluation"""
     batch_size: int = Field(...)
-    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
-    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
+    input_instruction: Optional[str] = Field(default="", description="input instruction (inherited from task config)")
+    output_instruction: Optional[str] = Field(default="", description="output instruction (inherited from task config)")
     answer_comparison_config: BaseComparisonConfig = Field(default=ExactMatchComparisonConfig(method="exact_match"))
+    inference: InferenceConfig = Field(default=InferenceConfig())
+    scoring: InferenceConfig = Field(default=InferenceConfig(temperature=1.2, n=8))
 
     @classmethod
     def from_dict(cls, config: Dict) -> "EvaluationConfig":
@@ -433,13 +439,12 @@ class EvaluationConfig(BaseConfig):
 # Configuration for Rewrite
 class BaseRewriteConfig(BaseConfig):
     method: str = Field(default=DEFAULT_REWRITE_METHOD)
-    input_instruction: str = Field(default=None, description="input instruction (inherited from task config)")
-    output_instruction: str = Field(default=None, description="output instruction (inherited from task config)")
+    input_instruction: Optional[str] = Field(default="", description="input instruction (inherited from task config)")
+    output_instruction: Optional[str] = Field(default="", description="output instruction (inherited from task config)")
+    batch_size: int = Field(default=5, gt=0, description="batch size for rewriting (inherited from task config)")
 
     @staticmethod
     def from_dict(config: Dict) -> "BaseRewriteConfig":
-        import logging
-        logger = logging.getLogger(__name__)
         try:
             method = config["method"]
             addition_config = config.get(method, {})
@@ -471,7 +476,6 @@ class TranslationConfig(BaseConfig):
     language: str = Field(default="english", description="Target language for the final dataset (e.g., 'english', 'arabic')")
     model_path: Optional[str] = Field(default=None, description="Translation model path (auto-determined based on language if not specified)")
     max_tokens: int = Field(default=256, description="Maximum tokens for translation generation")
-    batch_size: int = Field(default=1, description="Batch size for translation")
 
     @classmethod
     def from_dict(cls, config: Dict) -> "TranslationConfig":
@@ -483,7 +487,6 @@ class TranslationConfig(BaseConfig):
 
 # Global
 class SDGSConfig(BaseConfig):
-    seed: int = Field(...)
     device: str = Field(default="cuda:0", description="CUDA device to use for all GPU operations")
     output_dir: str = Field(..., description="synthetic dataset output directory")
     export_format: str = Field(default=DEFAULT_EXPORT_FORMAT, description="Export dataset format")
@@ -503,7 +506,7 @@ class SDGSConfig(BaseConfig):
         """Load configuration from a YAML file."""
         try:
             with open(yaml_path, encoding="utf-8") as fr:
-                config_dict = yaml.safe_load(fr)    
+                config_dict = yaml.safe_load(fr)
         except FileNotFoundError as e:
             raise Exception(f"not found: {yaml_path}")
         except yaml.YAMLError as e:
@@ -514,6 +517,11 @@ class SDGSConfig(BaseConfig):
         if not isinstance(config_dict, Dict):
             raise Exception("Error when parsing YAML.")
 
+        return cls.from_dict(config_dict)
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict) -> "SDGSConfig":
+        """Load configuration from a dictionary."""
         # Get global device
         global_device = config_dict.get("device", "cuda:0")
         task_config = SDGSTaskConfig.from_dict(config_dict["task"])
@@ -534,29 +542,34 @@ class SDGSConfig(BaseConfig):
 
         # Get instructions from task-level config
         task_dict = config_dict["task"]
-        input_instruction = task_dict.get("input_instruction")
-        output_instruction = task_dict.get("output_instruction")
+        input_instruction = task_dict.get("input_instruction") or ""
+        output_instruction = task_dict.get("output_instruction") or ""
 
-        # Inject instructions into evaluation config dict before parsing
+        # Inject instructions and batch_size into evaluation config dict before parsing
         evaluation_config_dict = config_dict["evaluation"].copy()
         evaluation_config_dict["input_instruction"] = input_instruction
         evaluation_config_dict["output_instruction"] = output_instruction
+        batch_size = task_dict.get("batch_size")
+        if batch_size and "batch_size" not in evaluation_config_dict:
+            evaluation_config_dict["batch_size"] = batch_size
         evaluation_config = EvaluationConfig.from_dict(evaluation_config_dict)
 
-        # Inject instructions into rewrite config dict before parsing
+        # Inject instructions and batch_size into rewrite config dict before parsing
         rewrite_config_dict = config_dict["rewrite"].copy()
         rewrite_config_dict["input_instruction"] = input_instruction
         rewrite_config_dict["output_instruction"] = output_instruction
+        batch_size = task_dict.get("batch_size")
+        if batch_size:
+            rewrite_config_dict["batch_size"] = batch_size
         rewrite_config = BaseRewriteConfig.from_dict(rewrite_config_dict)
 
         translation_config = TranslationConfig.from_dict(config_dict.get("translation", {}))
 
         return cls(
-            seed=config_dict["seed"],
             device=config_dict.get("device", "cuda:0"),
             output_dir=config_dict["output_dir"],
-            export_format=config_dict["export_format"],
-            n_workers=config_dict.get("n_workers", 1), 
+            export_format=config_dict.get("export_format", "jsonl"),
+            n_workers=config_dict.get("n_workers", 1),
             task_config=task_config,
             generator_config=generator_config,
             base_model_config=base_model_config,

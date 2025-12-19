@@ -2,11 +2,15 @@ import logging
 from tqdm import tqdm
 from typing import List, Dict, Optional
 
-from .base import *
+from ..configs.config import WebTaskConfig
+from ..models import ModelClient
+from ..dataset.dataset import Dataset
+from .base import BaseTaskExecutor
 from ..huggingface import HFCrawler
 from ..dataset.process import DataFilter, Formatter
 
 logger = logging.getLogger(__name__)
+
 
 class WebTaskExecutor(BaseTaskExecutor):
     def __init__(self,
@@ -219,7 +223,7 @@ class WebTaskExecutor(BaseTaskExecutor):
 
         return formatted_samples
 
-    def execute(self) -> Dataset:
+    def execute(self, reporter=None) -> Dataset:
         """
         Execute the full web task pipeline:
         1. Search datasets from HuggingFace
@@ -229,40 +233,93 @@ class WebTaskExecutor(BaseTaskExecutor):
         """
         logger.info("=== Step: Starting Web Task Pipeline ===")
 
-        # Step 1: Search datasets
-        logger.info("=== Step: Searching Datasets from HuggingFace ===")
+        # Search datasets
+        if reporter:
+            reporter.start_step("searching", "Searching Datasets", "Searching HuggingFace for relevant datasets...")
+
         datasets = self.search_datasets()
 
         if not datasets:
             logger.warning("No datasets found for the given keywords.")
+            if reporter:
+                reporter.complete_step({"message": "No datasets found", "datasets_found": 0})
             return Dataset()
 
-        # Step 2: Probe and validate datasets
-        logger.info("=== Step: Validating Datasets with Probe Samples ===")
+        if reporter:
+            reporter.complete_step({
+                "message": f"Found {len(datasets)} datasets",
+                "datasets_found": len(datasets),
+                "datasets": [{"id": d["id"], "keyword": d["keyword"]} for d in datasets]
+            })
+
+        # Probe and validate datasets
+        if reporter:
+            reporter.start_step(
+                "validating", "Validating Datasets",
+                message="Probing datasets with sample data...",
+                total=len(datasets),
+                unit="datasets"
+            )
+
         valid_datasets, fallback_datasets = self.validate_datasets(datasets)
 
         if not valid_datasets and not fallback_datasets:
             logger.warning("No valid datasets found after probing.")
             logger.warning("Consider optimizing your task_instruction or lowering dataset_score_threshold.")
+            if reporter:
+                reporter.complete_step({
+                    "message": "No valid datasets found",
+                    "valid_count": 0,
+                    "fallback_count": 0,
+                    "valid_datasets": [],
+                    "fallback_datasets": []
+                })
             return Dataset()
 
         # Calculate distribution
         datasets_to_use = self.calculate_distribution(valid_datasets, fallback_datasets, self.config.num_samples)
 
-        # Step 3: Extract and format samples
-        logger.info("=== Step: Extracting and Formatting Samples ===")
+        if reporter:
+            reporter.complete_step({
+                "message": f"Found {len(valid_datasets)} valid datasets, {len(fallback_datasets)} fallback",
+                "valid_count": len(valid_datasets),
+                "fallback_count": len(fallback_datasets),
+                "valid_datasets": [{"id": d["id"], "score": d["overall_score"]} for d in valid_datasets],
+                "fallback_datasets": [{"id": d["id"], "score": d["overall_score"]} for d in fallback_datasets],
+                "datasets_to_use": [{"id": d["id"], "samples_to_extract": d["samples_to_extract"]} for d in datasets_to_use]
+            })
+
+        # Extract and format samples
+        if reporter:
+            reporter.start_step(
+                "extracting", "Extracting Samples",
+                message=f"Extracting samples from {len(datasets_to_use)} datasets...",
+                total=len(datasets_to_use),
+                unit="datasets"
+            )
 
         all_samples = []
-        for dataset in tqdm(datasets_to_use, desc="Extracting samples", unit="dataset"):
+        for idx, dataset in enumerate(tqdm(datasets_to_use, desc="Extracting samples", unit="dataset")):
             samples = self.extract_and_format(dataset)
             all_samples.extend(samples)
             logger.info(f"Extracted {len(samples)} formatted samples from {dataset['id']}")
+
+            if reporter:
+                reporter.update_step(
+                    message=f"Extracted samples from {dataset['id']}",
+                    completed=idx + 1,
+                    current_item_name=dataset['id'],
+                    current_item_index=idx
+                )
 
         # Check if we need fallback datasets to reach num_samples
         if len(all_samples) < self.config.num_samples and fallback_datasets:
             remaining = self.config.num_samples - len(all_samples)
             logger.warning(f"Only extracted {len(all_samples)}/{self.config.num_samples} samples from valid datasets.")
             logger.warning(f"Using fallback datasets to extract {remaining} more samples.")
+
+            if reporter:
+                reporter.update_step(message=f"Using fallback datasets for {remaining} more samples...")
 
             # Use fallback datasets to fill the gap
             fallback_used = []
@@ -279,8 +336,20 @@ class WebTaskExecutor(BaseTaskExecutor):
                 all_samples.extend(samples)
                 logger.info(f"Extracted {len(samples)} samples from fallback dataset {dataset['id']}")
 
+                if reporter:
+                    reporter.update_step(
+                        message=f"Extracted from fallback {dataset['id']}",
+                        completed=len(datasets_to_use) + len(fallback_used)
+                    )
+
             if fallback_used:
                 logger.info(f"Used {len(fallback_used)} fallback datasets. Total samples: {len(all_samples)}")
+
+        if reporter:
+            reporter.complete_step({
+                "message": f"Extracted {len(all_samples)} samples",
+                "samples_extracted": len(all_samples)
+            })
 
         # Build final dataset
         final_dataset = Dataset()

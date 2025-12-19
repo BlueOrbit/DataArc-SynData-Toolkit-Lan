@@ -7,17 +7,18 @@ data based on task instructions and optional demonstration examples.
 
 import json
 import logging
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Optional
 from pathlib import Path
 
 from ..models import ModelClient
 from ..configs.config import DistillTaskConfig
+from ..generation.base import BaseGenerator
 
 logger = logging.getLogger(__name__)
 
 
-class BaseDistillation(ABC):
+class BaseDistillation(BaseGenerator):
     """
     Base generator for creating synthetic training data using LLMs.
 
@@ -28,6 +29,8 @@ class BaseDistillation(ABC):
 
     No passage retrieval - pure instruction-based generation.
     Uses batch generation with patterns for better diversity.
+
+    Extends BaseGenerator to inherit parse_and_validate_samples functionality.
     """
 
     def __init__(
@@ -44,10 +47,8 @@ class BaseDistillation(ABC):
             config: DistillTaskConfig instance containing task configuration
             buffer_dir: Directory for saving buffer/checkpoint files
         """
-        self.model = model
-        self.config = config
+        super().__init__(model, config, buffer_dir)
         self.task_instruction = config.task_instruction
-        self.buffer_dir = buffer_dir
 
     @abstractmethod
     def generate(

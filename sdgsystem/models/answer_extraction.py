@@ -33,7 +33,7 @@ class AnswerExtractor:
             base_instructions = [base_instructions] if is_single_instruction else base_instructions
             instructions: List[str] = []
             for base_instruction in base_instructions:
-                separator = ''
+                separator = '' if not base_instruction else ' '
                 instructions.append(f"{base_instruction}{separator}{self.config.instruction}")
             return instructions[0] if is_single_instruction else instructions
 
@@ -53,7 +53,6 @@ class AnswerExtractor:
         Returns:
             Extracted answer or None if tag not found
         """
-
         if self.config is None or not self.config.enabled:
             return response  # Return full response if extraction disabled
 
@@ -82,10 +81,11 @@ class AnswerExtractor:
                         answer = response[content_start:].strip()
                         return answer
 
-            # For non-XML tags (like "####"), use original split behavior
+            # For non-XML tags (like "####"), extract content after first tag
             parts = response.split(tag)
             if len(parts) > 1:
-                answer = parts[-1].strip()
+                # Take content after first tag occurrence
+                answer = parts[1].strip()
                 return answer
 
             return None

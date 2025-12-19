@@ -1,6 +1,8 @@
 # DataArc SynData Toolkit
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/) [![Framework: uv](https://img.shields.io/badge/Package_Manager-uv-42b983.svg)](https://github.com/astral-sh/uv) [![Gradio UI](https://img.shields.io/badge/GUI-Gradio-ff6f00.svg)](https://github.com/gradio-app/gradio) [![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-ffa000.svg)](https://docs.pydantic.dev/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Framework: uv](https://img.shields.io/badge/Package_Manager-uv-42b983.svg)](https://github.com/astral-sh/uv)
+[![Pydantic v2](https://img.shields.io/badge/Pydantic-v2-ffa000.svg)](https://docs.pydantic.dev/)
 
 *A modular, highly user-friendly synthetic data generation toolkit supporting multi-source, multi-language data synthesis.*
 
@@ -8,48 +10,48 @@
 
 :book: [ **English** | [中文](./README_zh.md) ]
 
-  
-
 ## :dart: Project Overview
 
-**DataArc SynData Toolkit** is a synthetic data generation toolkit developed and open-sourced by DataArc (https://www.dataarctech.com/) and International Digital Economy Academy (https://www.idea.edu.cn/). It enables users to generate customized training data in one step through simple configuration files based on their requirements.
-
-
+**DataArc SynData Toolkit** is a synthetic data generation toolkit developed and open-sourced by DataArc. It enables users to generate customized training data in one step through simple configuration files based on their requirements.
 
 ## :bulb: Key Features
 
-- **Extremely Simple Usage**: Synthesize data with [a single command](#3-Synthesize-Data) and a configuration file. [Gradio UI](##:desktop_computer:-Synthesizing-Data-with-GUI) is also provided for easy operations.
+- **Extremely Simple Usage**: Synthesize data with [a single command](#3-Synthesize-Data) and a configuration file. [GUI](##:desktop_computer:-Synthesizing-Data-with-GUI) is also provided for easy operations.
 - **Support for Multi-Source Synthetic Data**:
   - **Local Synthesis**: Support for generating data based on local corpora.
   - **Huggingface Integration**: Automatically screens and retrieves data from Huggingface.
   - **Model Distillation**: Enable synthetic data generation through model distillation.
+- **Integrated Post-Training Module**: End-to-end model training workflows powered by verl, supporting SFT and GRPO.
 - **Multilingual Support**: Supports English and various low-resource languages.
 - **Multi-Provider Model Support**: Works with local deployment, OpenAI APIs, and more.
 - **Highly Extensible**: The entire synthetic data workflow is modular, allowing developers to flexibly customize them.
 
+## :movie_camera: Demo
 
-## 🔬 Performance
+We provide a highly user friendly GUI for everything. Watch a two-minute demo to understand **DataArc SynData Toolkit**.
 
-| Model                       | Medical | Finance | Law   |
-|----------------------------|---------|---------|-------|
-| Qwen-2.5-7B-Instruct       | 42.34%  | 52.91%   | 19.80% |
+## :microscope: Performance
+
+| Model                       | Medical | Finance | Law    |
+|-----------------------------|---------|---------|--------|
+| Qwen-2.5-7B-Instruct        | 42.34%  | 52.91%  | 19.80% |
 | Trained with Synthetic Data | 64.57%  | 73.93%  | 42.80% |
 
 A few lines of code deliver over 20% performance improvements.
 
 ## :notebook: Changelog
 
-[25/11/17] We open-sourced our synthetic data platform.
-
-[25/11/27] We added **parallel processing module** to significantly accelerate the synthetic data generation pipeline.
-
-[25/11/28] We added **intermediate result saving**, allowing users to resume from the last successful stage instead of restarting the entire pipeline — a major **token saver**.
+[25/11/17] 🎉We open-sourced our synthetic data platform.  
+[25/11/27] We added **parallel processing module** to significantly accelerate the synthetic data generation pipeline.  
+[25/11/28] We added **intermediate result saving**, allowing users to resume from the last successful stage** instead of restarting the entire pipeline — a major **token saver**.  
+[25/12/xx] 🔥Major upgrade:
+- **Frontend–Backend Separation**: **DataArc SynData Toolkit** now adopts a fully frontend–backend separated architecture, featuring a **FastAPI backend** (REST APIs + SSE streaming for real-time progress) and a standalone **React** frontend for improved visualization, usability, and scalability.
+- **Post-Training Support via verl**: Introduced an integrated post-training module powered by **verl**, enabling end-to-end model training workflows including **SFT** and **GRPO** on synthesized data.
+- **Multilingual Expansion**: Added support for generating **Arabic** datasets, leveraging an Arabic translation model to produce fully localized synthetic data outputs.
 
 > [!TIP]
 >
 > If you cannot use the latest feature, please pull the latest code.
-
-
 
 ## :factory: DataArc SynData Toolkit Pipeline
 
@@ -64,77 +66,97 @@ A few lines of code deliver over 20% performance improvements.
 
 By decoupling modules, developers can achieve flexible customization of functional modules based on specific needs.
 
-
-
 ## :jigsaw: Use Cases
 
-We provide [three different use cases](examples/README.md) that sythesize data through **DataArc SynData Toolkit**.
-
-
+We provide [three different use cases](docs/USE_CASES.md) that sythesize data through **DataArc SynData Toolkit**.
 
 ## :file_folder: Project Structure
 
 ```
 dataarc-sdg/
-├── configs/						# Configuration Examples
-│   ├── example.yaml				# example YAML file
-|
-├── sdgsystem/						# Implementation of Functions
-│   ├── configs/					# Configuration Module
-|	|	├── config.py				# configuration parsing
-|	|	└── constants.py			# default arguments
-|
-│   ├── dataset/					# Dataset Module
-|	|	├── dataset.py				# dataset class
-|	|	└── process.py				# quality control and formatting
-|
-│   ├── huggingface/				# Huggingface Crawling
-│   ├── documents/					# Retrieve/Parsing/Chunk of Local Corpora
-│   ├── distillation/				# Model Distillation
-|
-│   ├── evaluation/					# Evaluation Module
-|	|	├── answer_comparison.py	# answer comparison
-|	|	├── evaluator.py			# evaluator
-|
-│   ├── generation/					# Generation Module
-|	|	├── base.py					# base class of generation
-|	|	├── generator.py			# data generator
-|	|	├── rewriter.py				# data rewriter
-|
-│   ├── models/						# Model Interaction Module
-|	|	├── postprocess/			# postprocess of model responses (e.g. majority voting)
-|	|	├── answer_extraction.py	# answer extraction from responses
-|	|	├── models.py				# model deployment and chatting
-|	|	├── processor_arguments.py	# arguments of post-processor
-|	|	├── client.py				# client for interacting with models
-|
-│   ├── tasks/						# Generation Task Execution Module
-|	|	├── base.py					# base class of executor
-|	|	├── (local/web/distill).py	# executor for different sources/route
-|	|	├── total_executor.py		# total executor
-|
-│   ├── translation/				# Support for Low-Resource Languages
-|
-│   ├── cli.py						# API for project functions
-│   ├── pipeline.py					# pipeline of data synthesis
-│   ├── prompts.py					# prompts used in project
-│   ├── token_counter.py			# token usage estimation
-│   └── utils.py					# other function utils
-|
-├── train/
-│   ├── datasets/					# training datasets
-|	|	├── examples/				  # training examples
-|	|	├── scripts/				  # scripts
-|	|	└── verl/			        # training module by verl
-|
-├── tests/							# Test Suite
-|
-├── app.py							# gradio UI
-├── pyproject.toml					# project dependencies
-└── README.md						# project documentation
+├── configs/                        # Configuration Examples
+│   └── example.yaml                # example YAML file
+│
+├── sdgsystem/                      # Core Implementation
+│   ├── app/                        # FastAPI Backend (REST + SSE)
+│   │   ├── api/                    # API endpoints
+│   │   │   ├── jobs.py             # job management endpoints
+│   │   │   ├── schemas.py          # Pydantic schemas
+│   │   │   └── router.py           # API router
+│   │   ├── core/                   # Core backend components
+│   │   │   ├── job_manager.py      # job lifecycle management
+│   │   │   ├── progress.py         # progress reporter for SSE
+│   │   │   └── sse.py              # Server-Sent Events utilities
+│   │   ├── services/               # Business logic services
+│   │   │   └── sdg_service.py      # SDG pipeline service wrapper
+│   │   └── main.py                 # FastAPI application entry
+│   │
+│   ├── configs/                    # Configuration Module
+│   │   ├── config.py               # configuration parsing
+│   │   └── constants.py            # default arguments
+│   │
+│   ├── dataset/                    # Dataset Module
+│   │   ├── dataset.py              # dataset class
+│   │   └── process.py              # quality control and formatting
+│   │
+│   ├── distillation/               # Model Distillation
+│   │   ├── base.py                 # base distillation class
+│   │   ├── sdg_distill.py          # SDG distillation implementation
+│   │   ├── self_instruct.py        # self-instruct method
+│   │   └── evol_instruct.py        # evol-instruct method
+│   │
+│   ├── documents/                  # Document Processing
+│   │   ├── load.py                 # document loading
+│   │   ├── parse.py                # document parsing
+│   │   ├── chunk.py                # text chunking
+│   │   └── retrieve.py             # passage retrieval (BM25)
+│   │
+│   ├── evaluation/                 # Evaluation Module
+│   │   ├── answer_comparison.py    # answer comparison methods
+│   │   └── evaluator.py            # sample evaluator
+│   │
+│   ├── generation/                 # Generation Module
+│   │   ├── base.py                 # base generator with validation
+│   │   ├── generator.py            # data generator
+│   │   └── rewriter.py             # data rewriter
+│   │
+│   ├── huggingface/                # HuggingFace Integration
+│   │   └── crawl.py                # dataset crawling from HF
+│   │
+│   ├── models/                     # Model Interaction Module
+│   │   ├── postprocess/            # response postprocessing
+│   │   │   ├── majority_voting.py  # majority voting implementation
+│   │   │   └── processor.py        # postprocessor orchestration
+│   │   ├── answer_extraction.py    # answer extraction from responses
+│   │   ├── client.py               # unified model client
+│   │   ├── models.py               # model deployment adapters
+│   │   ├── processor_arguments.py  # postprocessor arguments
+│   │   └── usage_counter.py        # token/time usage tracking
+│   │
+│   ├── tasks/                      # Task Execution Module
+│   │   ├── base.py                 # base executor class
+│   │   ├── local.py                # local document-based task
+│   │   ├── web.py                  # HuggingFace web task
+│   │   ├── distill.py              # distillation task
+│   │   └── task_executor.py        # unified task executor
+│   │
+│   ├── translation/                # Multilingual Support
+│   │   └── translator.py           # translation utilities
+│   │
+│   ├── webui/                      # React Frontend
+│   │
+│   ├── buffer.py                   # checkpoint/buffer management
+│   ├── cli.py                      # CLI entry point
+│   ├── parallel.py                 # parallel processing utilities
+│   ├── pipeline.py                 # main SDG pipeline
+│   ├── prompts.py                  # LLM prompts
+│   └── utils.py                    # utility functions
+│
+├── docs/                           # Documentation
+│
+├── pyproject.toml                  # project dependencies
+└── README.md                       # project documentation
 ```
-
-
 
 ## :rocket: Quick Start
 
@@ -152,7 +174,7 @@ pip install uv
 uv sync
 ```
 
-For hardware requirements and dependencies detail, please refer to [dependency and installation guide](DEPENDENCIES.md).
+For hardware requirements and dependencies detail, please refer to [dependency and installation guide](/docs/DEPENDENCIES.md).
 
 ### 2. Configuration
 
@@ -165,50 +187,63 @@ Run through CLI:
 Create a .env file and specified the following fields.
 
 ```shell
-OPENAI_API_KEY=sk-xxx   # your api key
-OPENAI_BASE_URL=https://api.openai.com/v1  # Optional: your base url
+API_KEY=sk-xxx   # your api key
+BASE_URL=https://api.openai.com/v1  # Optional: your base url
 ```
 
 And run following command.
 
 ```shell
-uv run sdg configs/example.yaml  # or change to your .yaml file
+uv run sdg generate configs/example.yaml  # or change to your .yaml file
 ```
 
 ## :twisted_rightwards_arrows: Training with Synthesized Data
 
-Prepare your synthesized data at datasets/. Here is an example of LoRA fine-tuning with gsm8k dataset on Qwen2.5-0.5B:
+**DataArc SynData Toolkit** integrates an end-to-end model training module powered by [verl](https://github.com/volcengine/verl), enabling you to train models directly on your synthesized data. We support two training methods: **SFT (Supervised Fine-Tuning)** and **GRPO (Group Relative Policy Optimization)**
+
+### Quick Start with CLI
+
+#### 1. Prepare Your Configuration
+
+Create a training configuration file based on the [SFT Configuration Example](./configs/sft_example.yaml) or [GRPO Configuration Example](./configs/grpo_example.yaml).
+
+#### 2. Run Training
 
 ```shell
-cd train
-bash examples/sft/gsm8k/run_qwen_05_peft.sh
+# SFT training
+uv run sdg train configs/sft.yaml
+
+# GRPO training
+uv run sdg train configs/grpo.yaml
 ```
 
-## :desktop_computer: Synthesizing Data with GUI
+For detailed configuration options, refer to the example YAML files.
 
-The UI is powered by [Gradio](https://github.com/gradio-app/gradio). Build with following command.
+## :desktop_computer: Run with GUI
+
+Start FastAPI server with following command.
 
 ```shell
-uv run python app.py
+uv run fastapi dev sdgsystem/app/main.py
 ```
 
-![](./assets/frontend.png)
+Open another terminal and build frontend with following command.
 
+```shell
+cd sdgsystem/webui
 
+# Install dependencies
+pnpm install
 
-## :wrench: Configuration System
+# Start development server
+pnpm dev
+```
 
-DataArc-SDG is configured using a flexible YAML file, please check our provided [example yaml file](configs/example.yaml).
-
-
+If you have any doubt about regrading our Web UI, check our [Web UI document](docs/WEBUI.md).
 
 ## :date: Schedule for the Next Release
 
-- **Arabic Support**: Support for generating Arabic synthetic data.
-- **Custom Data Sources**: Support for custom addition of data sources and corresponding protocol file conversion.
-- **Model Fine-tuning Module**: Support fine-tuning models using synthetic data within the pipeline.
-
-
+- **Multi-modal Dataset Synthesizing**: Support synthesize data through image.
 
 ## :handshake: Contributing
 

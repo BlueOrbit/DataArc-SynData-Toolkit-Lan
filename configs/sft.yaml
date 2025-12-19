@@ -1,0 +1,53 @@
+# SFT (Supervised Fine-Tuning) Configuration Example
+
+method: sft
+
+# Data configuration
+data:
+  train_files: ./output/learnable.jsonl
+  val_files: ./output/test.jsonl
+  train_batch_size: 32
+  micro_batch_size_per_gpu: 4
+  max_length: 2048                 # Maximum sequence length (prompt + response)
+  truncation: right                # Options: left, right, error
+  prompt_key: input                # Key for prompt field in JSONL
+  response_key: output             # Key for response field in JSONL
+
+# Model configuration
+model:
+  path: Qwen/Qwen2.5-7B            # HuggingFace model ID or local path
+  enable_gradient_checkpointing: true
+  use_remove_padding: true         # Removes padding tokens to save memory
+  use_liger: false                 # Use Liger kernel for faster training
+
+  # LoRA configuration (Parameter-Efficient Fine-Tuning)
+  # Set lora_rank > 0 to enable LoRA
+  lora_rank: 0                     # 0 = full fine-tuning, 32/64 = LoRA enabled
+  lora_alpha: 16                   # LoRA scaling factor
+  target_modules: all-linear       # Modules to apply LoRA: all-linear, q_proj,v_proj,k_proj,o_proj
+
+# Optimizer configuration
+optim:
+  lr: 1e-5                         # Learning rate
+
+# Parallelism settings
+ulysses_sequence_parallel_size: 1  # Sequence parallelism for long sequences
+
+# Wandb configuration (optional, for experiment tracking)
+wandb:
+  api_key: your-api-key            # Or set WANDB_API_KEY environment variable
+  entity:                          # Wandb username or team (auto-detected if not provided)
+
+# Trainer configuration
+trainer:
+  project_name: sdg-sft
+  experiment_name: sft-qwen2.5-7b
+  logger: console,wandb            # Options: console, wandb, tensorboard (comma-separated)
+  total_epochs: 1                  # Training epochs
+  save_freq: 100                   # Save checkpoint every N steps
+  nnodes: 1                        # Number of nodes
+  n_gpus_per_node: 1               # GPUs per node
+  default_local_dir: ./checkpoints/sft
+
+  # Wandb proxy (optional, for environments requiring proxy)
+  # wandb_proxy: http://proxy.example.com:8080

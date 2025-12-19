@@ -60,11 +60,6 @@ Output Format: {output_instruction}
 
 Only output the revised sample in the python dictionary form with 'input' and 'output' keys."""
 
-SAFETY_SUFFIX = (
-    "\nThe answer must remain factual, non-sensitive, and suitable for all audiences. "
-    "Do not include offensive, unsafe, or policy-violating content."
-)
-
 LLM_JUDGE_VOTING_PROMPT = """You are an expert judge tasked with selecting the best answer from multiple candidates.
 
 Question: {question}

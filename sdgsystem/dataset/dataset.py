@@ -174,7 +174,7 @@ class Dataset:
             else:  # 0 < score < 1
                 learnable_samples.append(sample_with_score)
 
-        logger.info(f"\nCategorized {len(self.samples)} samples:")
+        logger.info(f"Categorized {len(self.samples)} samples:")
         logger.info(f"  Solved (score=1.0): {len(solved_samples)} samples (too easy)")
         logger.info(f"  Learnable (0<score<1): {len(learnable_samples)} samples (appropriate difficulty)")
         logger.info(f"  Unsolved (score=0.0): {len(unsolved_samples)} samples (too hard)")
@@ -205,9 +205,9 @@ class Dataset:
         if len(solved) > 0:
             solved_path = os.path.join(output_dir, f"{base_name}_solved.{export_format}")
             solved.save(solved_path, export_format)
-            logger.info(f"\nSaved {len(solved)} solved samples to: {solved_path}")
+            logger.info(f"Saved {len(solved)} solved samples to: {solved_path}")
         else:
-            logger.info(f"\nNo solved samples to save")
+            logger.info(f"No solved samples to save")
 
         # Save learnable dataset
         if len(learnable) > 0:

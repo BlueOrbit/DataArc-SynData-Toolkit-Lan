@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 from ..models import ModelClient
 from ..configs.config import DistillTaskConfig
 from ..prompts import SELF_INSTRUCT_BATCH_GENERATION_PROMPT
-from base import BaseDistillation
+from .base import BaseDistillation
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ class SelfInstructDistillation(BaseDistillation):
 
             # Generate using model client
             try:
-                response, _ = self.model.generate(
+                response = self.model.generate(
                     prompt,
                     temperature=temperature,
                     max_tokens=max_tokens,

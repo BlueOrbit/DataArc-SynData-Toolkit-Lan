@@ -11,7 +11,6 @@ from ..answer_extraction import AnswerExtractor
 from ..usage_counter import ModelUsageCounter
 
 
-
 class BasePostProcessor(ABC):
     def __init__(self, 
         processor: Union[BaseLanguageModel, "BasePostProcessor"], 

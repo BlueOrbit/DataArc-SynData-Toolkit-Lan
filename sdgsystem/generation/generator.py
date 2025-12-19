@@ -7,20 +7,14 @@ using LLMs with pattern-based generation.
 import os
 from typing import List, Dict, Optional, Tuple
 import logging
-from tqdm import tqdm
 
 from ..configs.config import GenerationConfig
 from ..models import ModelClient, ModelUsageCounter
 from ..dataset.dataset import Dataset
-# Import centralized prompts
-from ..prompts import (
-    META_PROMPT,
-    PATTERN_GENERATION_PROMPT,
-)
+from ..prompts import META_PROMPT, PATTERN_GENERATION_PROMPT
 from ..parallel import ParallelExecutor
 from ..buffer import TaskBuffer
 from .base import BaseGenerator
-
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +26,6 @@ class DataGenerator(BaseGenerator):
     This class handles:
     - Pattern-based data generation using LLM
     - Harder/simpler sample generation
-
-    Note: Random seed should be set globally before using this class.
     """
 
     def __init__(self, model: ModelClient, config: GenerationConfig):
@@ -45,10 +37,10 @@ class DataGenerator(BaseGenerator):
         task_definition: str,
         demo_examples: List[Dict[str, str]],
         passages: Optional[List[str]]=None,
-        usage_counter: ModelUsageCounter = None, 
-        parallel_executor: ParallelExecutor = None, 
+        usage_counter: ModelUsageCounter = None,
+        parallel_executor: ParallelExecutor = None,
+        reporter=None,
     ) -> Dataset:
-        
         synthetic_dataset = Dataset()
 
         input_instruction = self.config.input_instruction
@@ -58,6 +50,9 @@ class DataGenerator(BaseGenerator):
         task_name = usage_counter.name if usage_counter else "Generator"
 
         # step1. get pattern (separate counter for pattern generation)
+        if reporter:
+            reporter.start_step("pattern_generation", "Generating Pattern", "Extracting patterns of data generation...")
+
         usage_counter_pattern = ModelUsageCounter(total=1, name=task_name + "-Pattern") if usage_counter else None
         pattern = self._generate_pattern(
             task_instruction=task_definition,
@@ -70,6 +65,9 @@ class DataGenerator(BaseGenerator):
         if usage_counter_pattern:
             usage_counter_pattern.estimate_usage(n=1)
 
+        if reporter:
+            reporter.complete_step()
+
         # step2. let LLM generate samples and get LLM responses (in batches)
         batch_size = getattr(self.config, 'batch_size', 5)  # Default batch size of 5
         batch_idxes: List[Tuple[int, int]] = []
@@ -77,88 +75,143 @@ class DataGenerator(BaseGenerator):
             batch_end = min(batch_start + batch_size, self.config.num_samples)
             batch_idxes.append((batch_start, batch_end))
 
+        if reporter:
+            reporter.start_step(
+                "sample_generation", "Generating Samples",
+                message="Starting sample generation...",
+                total=self.config.num_samples, unit="samples"
+            )
+
         # initialize usage_counter for batch generation (tracks batches to match buffer)
         usage_counter_gen = ModelUsageCounter(total=len(batch_idxes), name=task_name + "-Generation") if usage_counter else None
         # initialize buffer
         buffer_gen = TaskBuffer(total=len(batch_idxes), save_dir=os.path.join(self.buffer_dir, task_name + "-Generation"))
         # generate
         string_batches: List[List[str]] = []
+        generated_count = 0
+
         if parallel_executor and parallel_executor.n_workers > 1:
+            # set up progress callback for parallel processing
+            if reporter and usage_counter_gen:
+                def on_gen_progress(uc: ModelUsageCounter):
+                    samples_completed = min(uc.completed * batch_size, self.config.num_samples)
+                    reporter.update_step(
+                        message=f"Generated batch {uc.completed}/{uc.total}",
+                        completed=samples_completed,
+                        batch_current=uc.completed,
+                        batch_total=uc.total,
+                        batch_size=batch_size,
+                        tokens=uc.token,
+                        time_elapsed=uc.time,
+                        estimated_remaining_tokens=uc.estimated_remaining_tokens,
+                        estimated_remaining_time=uc.estimated_remaining_time,
+                    )
+                usage_counter_gen.set_on_update(on_gen_progress)
+
             # parallel processing
             string_batches: List[List[str]] = parallel_executor.execute(
                 iterable_inputs=batch_idxes,
                 process_function=self._generate_batch,
                 usage_counter=usage_counter_gen,
                 n=1,  # track per-batch completion to match buffer
-                buffer=buffer_gen, 
+                buffer=buffer_gen,
                 # additional fixed arguments
-                task_definition=task_definition, 
-                input_instruction=input_instruction, 
-                output_instruction=output_instruction, 
-                pattern=pattern, 
-                demo_examples=demo_examples, 
+                task_definition=task_definition,
+                input_instruction=input_instruction,
+                output_instruction=output_instruction,
+                pattern=pattern,
+                demo_examples=demo_examples,
                 passages=passages
             )
 
         else:
             # sequential processing
             string_batches: List[List[str]] = buffer_gen.load(usage_counter_gen)
-            with tqdm(total=self.config.num_samples, desc="Generating samples", unit="sample") as pbar:
-                for sample_idx, (batch_start, batch_end) in enumerate(batch_idxes):
-                    if buffer_gen and buffer_gen.detail_progress[sample_idx]:
-                        continue
+            for sample_idx, (batch_start, batch_end) in enumerate(batch_idxes):
+                if buffer_gen and buffer_gen.detail_progress[sample_idx]:
+                    generated_count += (batch_end - batch_start)
+                    continue
 
-                    batch_length = batch_end - batch_start
-                    batch_responses = self._generate_batch(
-                        batch_start_end=(batch_start, batch_end), 
-                        task_definition=task_definition, 
-                        input_instruction=input_instruction, 
-                        output_instruction=output_instruction, 
-                        pattern=pattern, 
-                        demo_examples=demo_examples, 
-                        passages=passages, 
-                        usage_counter=usage_counter_gen
+                batch_length = batch_end - batch_start
+                batch_responses = self._generate_batch(
+                    batch_start_end=(batch_start, batch_end),
+                    task_definition=task_definition,
+                    input_instruction=input_instruction,
+                    output_instruction=output_instruction,
+                    pattern=pattern,
+                    demo_examples=demo_examples,
+                    passages=passages,
+                    usage_counter=usage_counter_gen
+                )
+
+                string_batches.append(batch_responses)
+                generated_count += batch_length
+
+                # Estimate usage first (updates completed count for accurate estimates)
+                if usage_counter_gen:
+                    usage_counter_gen.estimate_usage(n=1)  # track per-batch completion to match buffer
+
+                # Report progress after estimate_usage so token/time estimates are accurate
+                if reporter:
+                    reporter.update_step(
+                        message=f"Generated batch {sample_idx + 1}/{len(batch_idxes)}",
+                        completed=generated_count,
+                        batch_current=sample_idx + 1,
+                        batch_total=len(batch_idxes),
+                        batch_size=batch_size,
+                        tokens=usage_counter_gen.token if usage_counter_gen else None,
+                        time_elapsed=usage_counter_gen.time if usage_counter_gen else None,
+                        estimated_remaining_tokens=usage_counter_gen.estimated_remaining_tokens if usage_counter_gen else None,
+                        estimated_remaining_time=usage_counter_gen.estimated_remaining_time if usage_counter_gen else None,
                     )
 
-                    string_batches.append(batch_responses)
-                    pbar.update(batch_length)
-
-                    if usage_counter_gen:
-                        usage_counter_gen.estimate_usage(n=1)  # track per-batch completion to match buffer
-                    if buffer_gen:
-                        buffer_gen.add_progress([sample_idx])
-                        buffer_gen.save(string_batches, usage_counter_gen)
+                if buffer_gen:
+                    buffer_gen.add_progress([sample_idx])
+                    buffer_gen.save(string_batches, usage_counter_gen)
 
         sample_strings: List[str] = []
         for batch in string_batches:
             sample_strings.extend(batch)
 
+        if reporter:
+            reporter.complete_step({"generated": len(sample_strings)})
+
         # step3. Parse and validate
-        # initialize usage_counter
+        if reporter:
+            reporter.start_step(
+                "validation", "Validating Samples",
+                message="Starting validation...",
+                total=len(sample_strings), unit="samples"
+            )
+
+        # initialize usage_counter and buffer
         usage_counter_val = ModelUsageCounter(total=len(sample_strings), name=task_name + "-Validation")
-        # initialize buffer 
         buffer_val = TaskBuffer(total=len(sample_strings), save_dir=os.path.join(self.buffer_dir, task_name + "-Validation"))
         # parse and validate
         samples: List[Dict] = self.parse_and_validate_samples(
             response_strings=sample_strings,
             output_instruction=output_instruction,
-            usage_counter=usage_counter_val, 
-            parallel_executor=parallel_executor, 
-            buffer=buffer_val
+            usage_counter=usage_counter_val,
+            parallel_executor=parallel_executor,
+            buffer=buffer_val,
+            reporter=reporter
         )
         synthetic_dataset.add_samples(samples)
 
+        if reporter:
+            reporter.complete_step({"valid": len(samples), "invalid": len(sample_strings) - len(samples)})
+
         return synthetic_dataset
     
-    def _generate_batch(self, 
-        batch_start_end: Tuple[int, int], 
-        task_definition: str, 
-        input_instruction: str, 
-        output_instruction: str, 
-        pattern: str, 
+    def _generate_batch(self,
+        batch_start_end: Tuple[int, int],
+        task_definition: str,
+        input_instruction: str,
+        output_instruction: str,
+        pattern: str,
         demo_examples: List[Dict[str, str]],
-        passages: Optional[List[str]]=None, 
-        usage_counter: ModelUsageCounter = None, 
+        passages: Optional[List[str]]=None,
+        usage_counter: ModelUsageCounter = None,
     ) -> List[str]:
         batch_start, batch_end = batch_start_end
         batch_prompts = []
@@ -185,7 +238,6 @@ class DataGenerator(BaseGenerator):
         )
 
         return batch_responses
-
 
     def _generate_pattern(
         self,

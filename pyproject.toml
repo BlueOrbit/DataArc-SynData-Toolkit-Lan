@@ -1,11 +1,13 @@
 [project]
-name = "dataarc-sdg"
+name = "DataArc SynData Toolkit"
 version = "0.1.0"
-description = "Add your description here"
+description = "Synthetic Data Generation Platfrom by DataArc"
 readme = "README.md"
 requires-python = "==3.11.13"
 dependencies = [
-    "gradio>=5.49.1",
+    # Core SDG dependencies
+    "datasets>=4.4.1",
+    "fastapi>=0.124.2",
     "mineru[core]>=2.6.4",
     "openai>=2.6.0",
     "pymupdf>=1.26.5",
@@ -14,11 +16,27 @@ dependencies = [
     "rank-bm25>=0.2.2",
     "sentence-transformers>=5.1.2",
     "tiktoken>=0.12.0",
-    "torch==2.6.0",
-    "torchaudio==2.6.0",
-    "torchvision==0.21.0",
+    "torch==2.8.0",
+    "torchaudio==2.8.0",
+    "torchvision==0.23.0",
     "tqdm>=4.67.1",
-    "vllm>=0.8.5.post1",
+    "vllm>=0.11.0",
+
+    # Training dependencies
+    "pandas>=2.3.3",
+    "codetiming>=1.4.0",
+    "flash-attn>=2.8.3",
+    "hydra-core>=1.3.2",
+    "peft>=0.18.0",
+    "pyarrow>=22.0.0",
+    "ray[default]>=0.1.0",
+    "tensordict>=0.10.0",
+    "torchdata>=0.11.0",
+    "wandb>=0.23.1",
+
+    # Build tools
+    "editables>=0.5",
+    "hatchling>=1.28.0",
 ]
 
 [[tool.uv.index]]
@@ -26,21 +44,21 @@ url = "https://mirrors.aliyun.com/pypi/simple/"
 default = true
 
 [[tool.uv.index]]
-name = "pytorch-cu124"
-url = "https://download.pytorch.org/whl/cu124"
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
 
 [tool.uv.sources]
-torch = { index = "pytorch-cu124" }
-torchvision = { index = "pytorch-cu124" }
-torchaudio = { index = "pytorch-cu124" }
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
 
 [project.scripts]
-sdg = "sdgsystem.cli:generate"
+sdg = "sdgsystem.cli:cli"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "editables"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["sdgsystem"]
+packages = ["sdgsystem", "verl"]

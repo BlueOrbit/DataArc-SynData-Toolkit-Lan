@@ -1,5 +1,5 @@
 """
-Filter out data suitable for the task and convert the format
+Filter out data suitable for web task and convert the format
 """
 
 import re
@@ -7,7 +7,6 @@ import json
 import logging
 from typing import Dict
 
-# from ..configs.constants import DEFAULT_WEB_TASK_INPUT_FORMAT, DEFAULT_WEB_TASK_OUTPUT_FORMAT
 from ..models import ModelClient
 from ..prompts import FIELD_FILTER_PROMPT, INSTRUCTION_JUDGE_PROMPT, SOLVABLE_JUDGE_PROMPT, FORMAT_CONVERSION_PROMPT
 

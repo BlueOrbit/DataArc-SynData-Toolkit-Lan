@@ -90,7 +90,6 @@ class KeywordExtractor:
 
 class BaseTaskExecutor(ABC):
     def __init__(self, config: BaseTaskConfig, llm: ModelClient) -> None:
-        # TODO
         self.config = config
         self.llm = llm
         self.keyword_extractor = KeywordExtractor(self.llm)
@@ -104,22 +103,17 @@ class BaseTaskExecutor(ABC):
         Extracts domain keywords using LLM based on task instruction and demo examples.
         """
         domain = self.config.domain
-        # if domain:
-        #     # Use provided domain directly
-        #     keywords = [domain] if isinstance(domain, str) else domain
-        # else:
-        #     # Extract keywords using LLM
-        #     keywords = self.keyword_extractor.extract_keywords(task_instruction=task_definition, demo_examples=demo_examples, usage_counter=usage_counter)
-
+ 
         # Extract keywords using LLM
         keywords = self.keyword_extractor.extract_keywords(task_instruction=task_definition, demo_examples=demo_examples, usage_counter=usage_counter)
-        # if domain, add domain as keyword to the list
-        if domain not in keywords:
+        
+        # if domain is non-empty and not already in keywords, add it
+        if domain and domain not in keywords:
             keywords.append(domain)
 
         return keywords
 
     @abstractmethod
-    def execute(self) -> Dataset:
+    def execute(self, reporter=None) -> Dataset:
         pass
 

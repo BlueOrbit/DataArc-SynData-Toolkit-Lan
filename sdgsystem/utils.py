@@ -1,23 +1,11 @@
 import os
 import json
-from typing import Dict, List, Optional
+from typing import List
 
 
-# utils for text
 def tokenize(text: str) -> List[str]:
-    """
-    Simple tokenization: lowercase and split by spaces.
-
-    Args:
-        text: Input text
-
-    Returns:
-        List of tokens
-    """
     return text.lower().split()
 
-
-# utils for file
 def check_dir(path: str):
     directory = os.path.dirname(path)
     os.makedirs(directory, exist_ok=True)
@@ -46,7 +34,6 @@ def save_json(obj, path: str):
 
 def save_jsonl(obj: List, path: str):
     assert path.endswith(".jsonl")
-    check_dir(path)
     check_dir(path)
     with open(path, "w", encoding="utf-8") as fw:
         for data in obj:

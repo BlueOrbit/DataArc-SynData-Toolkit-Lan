@@ -86,14 +86,14 @@ class DocumentLoader:
 
         # Handle None or empty string - check before creating Path object
         if not demo_examples_path:
-            logger.info(f"  No demo examples path provided")
-            logger.info(f"  Using empty demo examples list")
+            logger.info(f"No demo examples path provided")
+            logger.info(f"Using empty demo examples list")
             return demo_examples
 
         demo_path = Path(demo_examples_path)
         if not demo_path.exists():
-            logger.info(f"  Demo examples file not found: {demo_examples_path}")
-            logger.info(f"  Using empty demo examples list")
+            logger.info(f"Demo examples file not found: {demo_examples_path}")
+            logger.info(f"Using empty demo examples list")
             return demo_examples
 
         try:
@@ -104,9 +104,9 @@ class DocumentLoader:
                         example = json.loads(line)
                         demo_examples.append(example)
 
-            logger.info(f"  Loaded {len(demo_examples)} demo examples from {demo_examples_path}")
+            logger.info(f"Loaded {len(demo_examples)} demo examples from {demo_examples_path}")
         except Exception as e:
-            logger.error(f"  Error loading demo examples: {e}")
-            logger.error(f"  Using empty demo examples list")
+            logger.error(f"Error loading demo examples: {e}")
+            logger.error(f"Using empty demo examples list")
 
         return demo_examples

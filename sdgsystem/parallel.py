@@ -12,7 +12,6 @@ from .buffer import TaskBuffer
 logger = logging.getLogger(__name__)
 
 
-
 class ParallelExecutor:
     def __init__(self, 
         n_workers: int = 4, 
@@ -32,9 +31,9 @@ class ParallelExecutor:
         self,
         iterable_inputs: Iterable[Any],
         process_function: Callable[[Any], Any],
-        usage_counter: ModelUsageCounter = None, 
-        n: int = 1, 
-        buffer: TaskBuffer = None, 
+        usage_counter: ModelUsageCounter = None,
+        n: int = 1,
+        buffer: TaskBuffer = None,
         **kwargs
     ) -> Any:
         """
@@ -75,7 +74,7 @@ class ParallelExecutor:
                     try:
                         result = future.result()
                         # ensure the order of the results is preserved.
-                        index = future_to_idx[future]   
+                        index = future_to_idx[future]
                         results[index] = result
 
                         # estimate the token and time usage
@@ -86,11 +85,11 @@ class ParallelExecutor:
                         if buffer:
                             buffer.add_progress([index])
                             buffer.save(results, usage_counter)
-                        
+
                     except Exception as e:
                         raise e
 
             except Exception as e:
                 raise e
-        
+
         return results

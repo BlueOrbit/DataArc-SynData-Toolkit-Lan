@@ -1,0 +1,97 @@
+# GRPO (Group Relative Policy Optimization) Configuration Example
+
+method: grpo
+
+# Data configuration
+data:
+  train_files: ./output/learnable.jsonl
+  val_files: ./output/test.jsonl
+  train_batch_size: 64
+  micro_batch_size_per_gpu: 4      # For data loading only
+  max_prompt_length: 512           # Maximum prompt length
+  max_response_length: 1024        # Maximum response length
+  filter_overlong_prompts: true
+  truncation: error                # Options: left, right, error
+  prompt_key: input                # Key for prompt field in JSONL
+  response_key: output             # Key for ground truth (used by rule-based reward functions)
+
+# Model configuration
+model:
+  path: Qwen/Qwen2.5-7B            # HuggingFace model ID or local path
+  enable_gradient_checkpointing: true
+  use_remove_padding: true
+
+  # LoRA configuration
+  lora_rank: 0                     # 0 = full fine-tuning
+  lora_alpha: 16
+  target_modules: all-linear
+
+# Actor model configuration
+actor:
+  optim:
+    lr: 1e-6                       # Learning rate
+  ppo_mini_batch_size: 32          # PPO mini-batch size
+  ppo_micro_batch_size_per_gpu: 8
+  use_kl_loss: true                # KL divergence loss to prevent policy drift
+  kl_loss_coef: 0.001
+  kl_loss_type: low_var_kl
+  entropy_coeff: 0.0               # Entropy bonus for exploration
+  fsdp_config:
+    param_offload: false           # CPU offloading
+    optimizer_offload: false
+
+# Rollout configuration
+rollout:
+  n: 4                             # Number of response samples per prompt
+  gpu_memory_utilization: 0.4      # vLLM GPU memory usage
+  tensor_model_parallel_size: 1
+  mode: async                      # Always use async mode for vLLM
+
+# Reference model configuration
+ref:
+  fsdp_config:
+    param_offload: true            # Reference model can be offloaded to save GPU memory
+
+# Algorithm configuration
+algorithm:
+  adv_estimator: grpo              # Advantage estimator: grpo, reinforce
+  use_kl_in_reward: false          # Whether to include KL penalty in reward
+
+# Reward configuration (REQUIRED - choose one option)
+reward:
+  # Option 1: Verl Built-in reward function (auto-selected by data_source)
+  # Supported: openai/gsm8k, lighteval/MATH, hiyouga/geometry3k, math_dapo, etc.
+  data_source: custom              # Set to dataset name or "custom" for custom reward
+
+  # Option 2: Custom reward function
+  custom_reward_function:
+    path: /your/custom_reward.py   # Path to your reward function file
+    name: compute_score            # Function name (must match signature)
+
+  # Option 3: Reward model
+  # reward_model:
+  #   enable: true
+  #   path: path/to/reward-model   # HuggingFace model or local path
+
+# Wandb configuration (optional, for experiment tracking)
+wandb:
+  api_key: your-api-key            # Or set WANDB_API_KEY environment variable
+  entity:                          # Wandb username or team (auto-detected if not provided)
+  enable_weave: true               # Enable Weave trajectory tracing
+
+# Trainer configuration
+trainer:
+  project_name: sdg-grpo
+  experiment_name: grpo-qwen2.5-7b
+  logger: console,wandb            # Options: console, wandb, tensorboard (comma-separated)
+  total_epochs: 1                  # Training epochs
+  save_freq: 20                    # Save checkpoint every N steps
+  test_freq: 5                     # Run test every N steps (-1 to disable)
+  val_before_train: false          # Run validation before training
+  critic_warmup: 0                 # Critic warmup steps (0 = no warmup)
+  nnodes: 1                        # Number of nodes
+  n_gpus_per_node: 1               # GPUs per node
+  default_local_dir: ./checkpoints/grpo
+
+  # Wandb proxy (optional, for environments requiring proxy)
+  # wandb_proxy: http://proxy.example.com:8080

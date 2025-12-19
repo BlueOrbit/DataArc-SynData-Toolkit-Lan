@@ -28,8 +28,6 @@ from .base import BasePostProcessor
 logger = logging.getLogger(__name__)
 
 
-
-
 class MajorityVotingProcessor(BasePostProcessor):
     def __init__(self, 
         processor: Union[BaseLanguageModel, "BasePostProcessor"], 
@@ -136,8 +134,7 @@ class MajorityVotingProcessor(BasePostProcessor):
 
         return final_responses
 
-        
-# Class for voting method
+
 class BaseVoting(ABC):
     def __init__(self, config: BaseVotingConfig) -> None:
         self.config = config

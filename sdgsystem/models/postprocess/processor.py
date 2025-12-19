@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List, Union
 
 from ...configs.config import (
     PostProcessConfig, 
@@ -10,8 +10,6 @@ from ..usage_counter import ModelUsageCounter
 from ..processor_arguments import ProcessorArgs
 from .base import BasePostProcessor, NonePostProcessor
 from .majority_voting import MajorityVotingConfig, MajorityVotingProcessor
-
-
 
 
 class PostProcessor:

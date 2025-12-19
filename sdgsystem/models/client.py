@@ -1,10 +1,11 @@
-from .answer_extraction import *
-from .models import *
-from .postprocess import *
+from typing import List, Union
+
+from ..configs.config import ModelConfig, AnswerExtractionConfig, PostProcessConfig
+from .answer_extraction import AnswerExtractor
+from .models import BaseLanguageModel
+from .postprocess import PostProcessor
 from .processor_arguments import ProcessorArgs
 from .usage_counter import ModelUsageCounter
-
-
 
 
 class ModelClient:
@@ -45,17 +46,3 @@ class ModelClient:
 
     def get_model(self) -> BaseLanguageModel:
         return self.model.get_model()
-        
-    def report_token_usage(self, done, total):
-        used = self.token_usage
-
-        if done > 0:
-            estimated_total = used / done * total
-        else:
-            estimated_total = 0
-
-        logging.info(
-            f"\n[Token Usage] Processed {done}/{total} samples | "
-            f"Current token usage = {used} | "
-            f"Estimated total token = {estimated_total:.2f}"
-        )

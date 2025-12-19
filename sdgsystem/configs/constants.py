@@ -1,7 +1,6 @@
 # file extensions
 DEFAULT_EXPORT_FORMAT = "jsonl"
 
-
 # settings for keyword extractor
 DEFAULT_KEYWORDS_EXTRACT_EXAMPLES = [
     {"你的任务是以选择题形式回答 CFA 考试问题。你需要从三个选项（例如 A、B、C）中选择正确答案。题目涵盖资产估值、应用投资工具和概念分析各种投资、投资组合管理、财富规划、伦理与专业标准等。": "['Chinese Finance', 'CFA', 'Chinese CFA', 'Asset Valuation', 'Investment Tools', 'Portfolio Management', 'Wealth Planning', 'Ethics', 'Professional Standards']"},
@@ -25,11 +24,9 @@ DEFAULT_ANSWER_INSTRUCTION = "Output your final answer after <answer>"
 DEFAULT_MAX_RETRY_ATTEMPTS = 10
 DEFAULT_RETRY_BASE_DELAY = 2
 
-
 # settings for local LLM
 DEFAULT_LOCAL_MODEL_LEN = 8192
 DEFAULT_GPU_UTILIZATION = 0.9
-
 
 # settings for task
 DEFAULT_TASK_NAME = "default_task"
@@ -55,7 +52,6 @@ DEFAULT_COMPARISON_METHOD = "exact_match"
 DEFAULT_REWRITE_METHOD = "difficulty_adjust"
 DEFAULT_EASIER_TEMPERATURE = 0.9
 DEFAULT_HARDER_TEMPERATURE = 1.1
-
 
 # # settings for web task
 DEFAULT_WEB_DATASET_LIMIT = 5

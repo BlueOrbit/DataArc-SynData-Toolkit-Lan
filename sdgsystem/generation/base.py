@@ -2,7 +2,6 @@ import json
 from typing import List, Dict, Union, Tuple
 from tqdm import tqdm
 from ..models import ModelClient, ProcessorArgs, ModelUsageCounter
-from ..prompts import SAFETY_SUFFIX
 from ..parallel import ParallelExecutor
 from ..buffer import TaskBuffer
 import logging
@@ -26,10 +25,11 @@ class BaseGenerator:
 
     def parse_and_validate_samples(self,
         response_strings: List[Union[Dict, str]],
-        output_instruction: str, 
-        usage_counter: ModelUsageCounter = None, 
-        parallel_executor: ParallelExecutor = None, 
-        buffer: TaskBuffer = None, 
+        output_instruction: str,
+        usage_counter: ModelUsageCounter = None,
+        parallel_executor: ParallelExecutor = None,
+        buffer: TaskBuffer = None,
+        reporter=None,
     ) -> List[Dict]:
         """
         Parse raw LLM response strings and validate with majority voting.
@@ -93,7 +93,7 @@ class BaseGenerator:
                 # already sample in dictionary type
                 parsed_samples.append(response_str)
 
-        logger.info(f"  Parsing: {len(parsed_samples)}/{len(response_strings)} valid, {parse_failed_count} failed")
+        logger.info(f"Parsing: {len(parsed_samples)}/{len(response_strings)} valid, {parse_failed_count} failed")
 
         if not parsed_samples:
             return []
@@ -101,10 +101,11 @@ class BaseGenerator:
         # Step 2: Apply majority voting (always enabled, following Data_Synthesis_RL)
         validated_samples = self._validate_samples(
             samples=parsed_samples,
-            output_instruction=output_instruction, 
-            usage_counter=usage_counter, 
-            parallel_executor=parallel_executor, 
-            buffer=buffer
+            output_instruction=output_instruction,
+            usage_counter=usage_counter,
+            parallel_executor=parallel_executor,
+            buffer=buffer,
+            reporter=reporter
         )
 
         return validated_samples
@@ -131,9 +132,7 @@ class BaseGenerator:
         batch_prompts = []
         for sample in batch_samples:
             input_content = sample["input"]
-            # Use format_prompts to combine output_instruction with answer_config
-            formatted_instruction = self.model.answer_extractor.format_prompts(output_instruction)
-            prompt = str(input_content) + "\n" + formatted_instruction + "\n" + SAFETY_SUFFIX
+            prompt = str(input_content) + "\n" + output_instruction
             batch_prompts.append(prompt)
 
         # Generate batch responses with majority voting
@@ -166,9 +165,10 @@ class BaseGenerator:
     def _validate_samples(self,
         samples: List[Dict],
         output_instruction: str,
-        usage_counter: ModelUsageCounter = None, 
-        parallel_executor: ParallelExecutor = None, 
-        buffer: TaskBuffer = None, 
+        usage_counter: ModelUsageCounter = None,
+        parallel_executor: ParallelExecutor = None,
+        buffer: TaskBuffer = None,
+        reporter=None,
     ) -> List[Dict]:
         """
         Validate and improve samples using majority voting (always enabled).
@@ -200,13 +200,30 @@ class BaseGenerator:
             usage_counter.total = len(batches)
 
         if parallel_executor and parallel_executor.n_workers > 1:
+            # set up progress callback for parallel processing
+            if reporter and usage_counter:
+                def on_val_progress(uc: ModelUsageCounter):
+                    samples_completed = min(uc.completed * batch_size, len(samples))
+                    reporter.update_step(
+                        message=f"Validated batch {uc.completed}/{uc.total}",
+                        completed=samples_completed,
+                        batch_current=uc.completed,
+                        batch_total=uc.total,
+                        batch_size=batch_size,
+                        tokens=uc.token,
+                        time_elapsed=uc.time,
+                        estimated_remaining_tokens=uc.estimated_remaining_tokens,
+                        estimated_remaining_time=uc.estimated_remaining_time,
+                    )
+                usage_counter.set_on_update(on_val_progress)
+
             # parallel processing
             result_batches: List[Tuple[List[Dict], int]] = parallel_executor.execute(
                 iterable_inputs=batches,
                 process_function=self._validate_batch,
                 output_instruction=output_instruction,
                 usage_counter=usage_counter,
-                n=1, # track per-batch completion to match buffer
+                n=1,  # track per-batch completion to match buffer
                 buffer=buffer
             )
 
@@ -218,26 +235,44 @@ class BaseGenerator:
         else:
             # sequential processing
             validated_batches: List[List[Dict]] = buffer.load(usage_counter)
+            validated_count = 0
             with tqdm(total=len(samples), desc="Validating samples", unit="sample") as pbar:
                 for sample_idx, batch_samples in enumerate(batches):
                     if buffer and buffer.detail_progress[sample_idx]:
+                        validated_count += len(batch_samples)
                         continue
 
                     # Build prompts for this batch
                     batch_validated_samples, batch_failed_count = self._validate_batch(
-                        batch_samples=batch_samples, 
-                        output_instruction=output_instruction, 
+                        batch_samples=batch_samples,
+                        output_instruction=output_instruction,
                         usage_counter=usage_counter
                     )
 
                     validated_batches.append(batch_validated_samples)
                     failed_count += batch_failed_count
+                    validated_count += len(batch_samples)
 
                     pbar.update(len(batch_samples))
 
-                    # Estimate usage for the batch
+                    # Estimate usage first (updates completed count for accurate estimates)
                     if usage_counter:
                         usage_counter.estimate_usage(n=1)  # track per-batch completion to match buffer
+
+                    # Report progress after estimate_usage so token/time estimates are accurate
+                    if reporter:
+                        reporter.update_step(
+                            message=f"Validated batch {sample_idx + 1}/{len(batches)}",
+                            completed=validated_count,
+                            batch_current=sample_idx + 1,
+                            batch_total=len(batches),
+                            batch_size=batch_size,
+                            tokens=usage_counter.token if usage_counter else None,
+                            time_elapsed=usage_counter.time if usage_counter else None,
+                            estimated_remaining_tokens=usage_counter.estimated_remaining_tokens if usage_counter else None,
+                            estimated_remaining_time=usage_counter.estimated_remaining_time if usage_counter else None,
+                        )
+
                     # save buffer
                     if buffer:
                         buffer.add_progress([sample_idx])
@@ -249,8 +284,8 @@ class BaseGenerator:
         # Summary
         success_count = len(samples) - failed_count
         logger.info(f"Validation Summary:")
-        logger.info(f"Successful: {success_count}/{len(samples)}")
-        logger.info(f"Failed: {failed_count}/{len(samples)}")
-        logger.info(f"Kept samples: {len(validated_samples)}/{len(samples)}")
+        logger.info(f"  Successful: {success_count}/{len(samples)}")
+        logger.info(f"  Failed: {failed_count}/{len(samples)}")
+        logger.info(f"  Kept samples: {len(validated_samples)}/{len(samples)}")
 
         return validated_samples
