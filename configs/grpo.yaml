@@ -72,6 +72,7 @@ reward:
   # reward_model:
   #   enable: true
   #   path: path/to/reward-model   # HuggingFace model or local path
+  #   micro_batch_size_per_gpu: 4  # Batch size per GPU for reward model (default: 4)
 
 # Wandb configuration (optional, for experiment tracking)
 wandb:

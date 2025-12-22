@@ -27,12 +27,6 @@ def _clear_upload_dir():
     os.makedirs(DOCUMENTS_DIR, exist_ok=True)
 
 
-def _clear_buffer_dir():
-    """Clear the buffer directory."""
-    if os.path.exists(BUFFER_DIR):
-        shutil.rmtree(BUFFER_DIR)
-
-
 def _save_file(file: UploadFile, target_path: str) -> str:
     """Save a single uploaded file to the target path."""
     os.makedirs(os.path.dirname(target_path), exist_ok=True)
@@ -79,9 +73,6 @@ async def create_job(
     Returns:
         job_id of the created job
     """
-    # Clear buffer directory for fresh start
-    _clear_buffer_dir()
-
     # Parse config JSON
     try:
         config_dict = json.loads(config)

@@ -9,6 +9,7 @@ dependencies = [
     "datasets>=4.4.1",
     "fastapi>=0.124.2",
     "mineru[core]>=2.6.4",
+    "anthropic>=0.75.0",
     "openai>=2.6.0",
     "pymupdf>=1.26.5",
     "python-dotenv>=1.1.1",

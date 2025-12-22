@@ -129,6 +129,7 @@ class RewardModelSubConfig(BaseModel):
     """Reward model sub-config."""
     enable: bool = Field(default=False)
     path: Optional[str] = Field(default=None)
+    micro_batch_size_per_gpu: int = Field(default=4, gt=0, description="Batch size per GPU for reward model inference")
 
 
 class RewardConfig(BaseModel):
@@ -288,6 +289,7 @@ class GRPOConfig(BaseModel):
         if self.reward.reward_model and self.reward.reward_model.enable:
             args["reward_model.enable"] = "true"
             args["reward_model.model.path"] = self.reward.reward_model.path
+            args["reward_model.micro_batch_size_per_gpu"] = self.reward.reward_model.micro_batch_size_per_gpu
         else:
             args["reward_model.enable"] = "false"
             if self.reward.custom_reward_function:

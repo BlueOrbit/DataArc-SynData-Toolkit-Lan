@@ -118,7 +118,6 @@ class APIModel(BaseLanguageModel):
         # Provider-specific default base URLs
         default_base_urls = {
             "openai": "https://api.openai.com/v1",
-            "deepseek": "https://api.deepseek.com/v1",
             "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "ollama": "http://localhost:11434/v1",
         }

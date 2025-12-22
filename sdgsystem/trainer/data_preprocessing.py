@@ -107,6 +107,7 @@ def prepare_grpo_data(
     prompt_key: str = "input",
     response_key: Optional[str] = "output",
     data_source: Optional[str] = None,
+    use_reward_model: bool = False,
 ) -> tuple[str, Optional[str]]:
     """
     Prepare training and validation data for GRPO (Group Relative Policy Optimization).
@@ -120,13 +121,17 @@ def prepare_grpo_data(
        - Ground truth stored in parquet "reward_model" field
     2. Reward model:
        - No ground truth needed, reward model scores generated responses directly
-       - Set response_key=None
+       - Set response_key=None and use_reward_model=True
+       - Prompts are converted to chat template format (list of messages)
 
     Input JSONL format (same as SFT):
         {"input": "question", "output": "answer", ...}
 
-    Output Parquet format:
+    Output Parquet format (rule-based):
         {"prompt": "question", "data_source": "openai/gsm8k", "reward_model": {"ground_truth": "answer"}, "extra_info": {...}}
+
+    Output Parquet format (reward model):
+        {"prompt": [{"role": "user", "content": "question"}], "extra_info": {...}}
 
     Args:
         train_jsonl: Path to training JSONL file
@@ -135,6 +140,7 @@ def prepare_grpo_data(
         prompt_key: Key name for prompt in JSONL (default: "input")
         response_key: Key name for ground truth in JSONL (default: "output"), None if using reward model
         data_source: Dataset source identifier for reward function routing
+        use_reward_model: Whether using a reward model (requires chat template format)
 
     Returns:
         Tuple of (train_parquet_path, val_parquet_path or None)
@@ -153,16 +159,29 @@ def prepare_grpo_data(
             logger.warning(f"Train sample {i} missing '{prompt_key}' key, skipping")
             continue
 
+        # Format prompt based on reward mode
+        prompt_content = sample[prompt_key]
+        if use_reward_model:
+            # Reward model requires chat template format (list of messages)
+            prompt_value = [{"role": "user", "content": prompt_content}]
+        else:
+            # Rule-based reward uses plain string
+            prompt_value = prompt_content
+
         converted = {
-            "prompt": sample[prompt_key],
+            "prompt": prompt_value,
         }
 
         # Add data_source for reward function routing
         if data_source:
             converted["data_source"] = data_source
 
-        # Use response as ground truth for rule-based reward computation
-        if response_key and response_key in sample:
+        # Add reward_model field (required by verl)
+        if use_reward_model:
+            # Reward model mode: indicate style="model" (no ground truth needed)
+            converted["reward_model"] = {"style": "model"}
+        elif response_key and response_key in sample:
+            # Rule-based reward: include ground truth for verification
             converted["reward_model"] = {"ground_truth": sample[response_key]}
 
         # Preserve additional metadata
@@ -187,14 +206,28 @@ def prepare_grpo_data(
                 logger.warning(f"Val sample {i} missing '{prompt_key}' key, skipping")
                 continue
 
+            # Format prompt based on reward mode
+            prompt_content = sample[prompt_key]
+            if use_reward_model:
+                # Reward model requires chat template format (list of messages)
+                prompt_value = [{"role": "user", "content": prompt_content}]
+            else:
+                # Rule-based reward uses plain string
+                prompt_value = prompt_content
+
             converted = {
-                "prompt": sample[prompt_key],
+                "prompt": prompt_value,
             }
 
             if data_source:
                 converted["data_source"] = data_source
 
-            if response_key and response_key in sample:
+            # Add reward_model field (required by verl)
+            if use_reward_model:
+                # Reward model mode: indicate style="model" (no ground truth needed)
+                converted["reward_model"] = {"style": "model"}
+            elif response_key and response_key in sample:
+                # Rule-based reward: include ground truth for verification
                 converted["reward_model"] = {"ground_truth": sample[response_key]}
 
             exclude_keys = [prompt_key] + ([response_key] if response_key else [])

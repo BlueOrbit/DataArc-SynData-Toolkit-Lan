@@ -191,6 +191,7 @@ class TrainingLauncher:
             prompt_key=config.data.prompt_key,
             response_key=response_key,
             data_source=data_source,
+            use_reward_model=use_reward_model,
         )
         logger.info(f"Training data: {train_parquet}")
         if val_parquet:

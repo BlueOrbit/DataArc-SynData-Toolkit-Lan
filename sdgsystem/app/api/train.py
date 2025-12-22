@@ -5,7 +5,7 @@ import shutil
 import logging
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 
 from .schemas import TrainJobStatus, HuggingFaceUploadRequest, HuggingFaceUploadResponse
 from ..core.job_manager import train_job_manager
@@ -256,8 +256,14 @@ async def start_training(job_id: str):
 
     status = reporter.job.status
 
-    # Job already completed/failed/cancelled - return error
-    if status in (TrainJobStatus.COMPLETED, TrainJobStatus.FAILED, TrainJobStatus.CANCELLED):
+    # Job already completed - return success with status
+    if status == TrainJobStatus.COMPLETED:
+        return JSONResponse(
+            content={"job_id": job_id, "status": "completed", "message": "Job already completed successfully"}
+        )
+
+    # Job failed or cancelled - return error
+    if status in (TrainJobStatus.FAILED, TrainJobStatus.CANCELLED):
         raise HTTPException(
             status_code=400,
             detail={
