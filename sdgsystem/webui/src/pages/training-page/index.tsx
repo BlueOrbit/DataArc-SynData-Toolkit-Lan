@@ -22,6 +22,10 @@ export default function TrainingPage() {
         const jobState = JSON.parse(storedJobState)
         setJobId(jobState.jobId)
         setActiveTab('export')
+        // Restore training status if available
+        if (jobState.status) {
+          setTrainingStatus(jobState.status)
+        }
         message.info('Reconnecting to training task...')
       } catch (error) {
         console.error('Failed to parse stored job state:', error)

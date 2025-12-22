@@ -267,7 +267,7 @@ interface TaskState {
 const DEFAULT_CONFIG: TaskConfig = {
   device: 'cuda:0',
   n_workers: 2,
-  output_dir: '.output/',
+  output_dir: '.output',
   export_format: 'jsonl',
   task: {
     name: '',

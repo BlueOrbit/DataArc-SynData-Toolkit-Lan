@@ -47,9 +47,16 @@ export default function TrainingExport({
   onStatusChange,
 }: TrainingExportProps) {
   const token = useAntdTheme()
-  const experimentName = useTrainingStore(state => state.trainingConfig.trainer.experiment_name)
-  const method = useTrainingStore(state => state.trainingConfig.method)
-  const modelPath = useTrainingStore(state => state.trainingConfig.model.path)
+  const storeExperimentName = useTrainingStore(
+    state => state.trainingConfig.trainer.experiment_name,
+  )
+  const storeMethod = useTrainingStore(state => state.trainingConfig.method)
+  const storeModelPath = useTrainingStore(state => state.trainingConfig.model.path)
+
+  // Task info state - restore from localStorage if available
+  const [experimentName, setExperimentName] = useState<string>('')
+  const [method, setMethod] = useState<string>('')
+  const [modelPath, setModelPath] = useState<string>('')
 
   const [status, setStatus] = useState<'idle' | 'running' | 'completed' | 'cancelled' | 'error'>(
     'idle',
@@ -65,6 +72,31 @@ export default function TrainingExport({
   const [autoScrollEnabled, setAutoScrollEnabled] = useState(true) // 仅在用户停留底部时自动滚动
   const sseControllerRef = useRef<AbortController | null>(null)
   const hasConnectedRef = useRef(false) // 防止重复连接
+
+  // Helper function to update localStorage with current task state
+  const updateLocalStorage = useCallback(
+    (updates: Partial<{ status: typeof status; wandbUrl: string | null }>) => {
+      if (!jobId) return
+
+      const storedJobState = localStorage.getItem('training_job_state')
+      if (storedJobState) {
+        try {
+          const jobState = JSON.parse(storedJobState)
+          const updatedState = {
+            ...jobState,
+            experimentName,
+            method,
+            modelPath,
+            ...updates,
+          }
+          localStorage.setItem('training_job_state', JSON.stringify(updatedState))
+        } catch (error) {
+          console.error('Failed to update localStorage:', error)
+        }
+      }
+    },
+    [jobId, experimentName, method, modelPath],
+  )
 
   // Stats
   const [_stats, setStats] = useState({
@@ -166,6 +198,41 @@ export default function TrainingExport({
     }
   }, [])
 
+  // Restore task info from localStorage on mount
+  useEffect(() => {
+    const storedJobState = localStorage.getItem('training_job_state')
+    if (storedJobState) {
+      try {
+        const jobState = JSON.parse(storedJobState)
+        setExperimentName(jobState.experimentName || storeExperimentName || 'Untitled Task')
+        setMethod(jobState.method || storeMethod || 'SFT')
+        setModelPath(jobState.modelPath || storeModelPath || '')
+        setWandbUrl(jobState.wandbUrl || null)
+        if (jobState.status) {
+          setStatus(jobState.status)
+        }
+      } catch (error) {
+        console.error('Failed to restore task info from localStorage:', error)
+        // Fallback to store values
+        setExperimentName(storeExperimentName || 'Untitled Task')
+        setMethod(storeMethod || 'SFT')
+        setModelPath(storeModelPath || '')
+      }
+    } else {
+      // Use store values if no localStorage data
+      setExperimentName(storeExperimentName || 'Untitled Task')
+      setMethod(storeMethod || 'SFT')
+      setModelPath(storeModelPath || '')
+    }
+  }, [storeExperimentName, storeMethod, storeModelPath])
+
+  // Sync status and wandbUrl to localStorage when they change
+  useEffect(() => {
+    if (jobId && (status !== 'idle' || wandbUrl)) {
+      updateLocalStorage({ status, wandbUrl })
+    }
+  }, [status, wandbUrl, jobId, updateLocalStorage])
+
   // Notify parent component when status changes
   useEffect(() => {
     onStatusChange?.(status)
@@ -226,7 +293,13 @@ export default function TrainingExport({
 
     sseControllerRef.current?.abort()
     setLogs([])
-    setStatus('running')
+
+    // Set to 'running' for new connections, unless task is already completed
+    // This handles cases where previous task had 'error' or 'cancelled' status
+    if (status !== 'completed') {
+      setStatus('running')
+    }
+
     // Reset stats
     setStats({
       lr: '--',
@@ -247,6 +320,32 @@ export default function TrainingExport({
       },
       async onopen(response) {
         const contentType = response.headers.get('content-type')
+
+        // Handle JSON response (e.g., when job is already completed)
+        if (response.ok && contentType?.includes('application/json')) {
+          try {
+            const data = await response.json()
+            if (data.status === 'completed') {
+              setStatus('completed')
+              setProgress(100)
+              setLogs(prev => [...prev, `Training task already completed: ${data.message || ''}`])
+              message.info(data.message || 'Training task already completed')
+              controller.abort()
+              return
+            } else if (data.status === 'error' || data.status === 'failed') {
+              setStatus('error')
+              setLogs(prev => [...prev, `Training task failed: ${data.message || ''}`])
+              message.error(data.message || 'Training task failed')
+              controller.abort()
+              return
+            }
+          } catch (error) {
+            console.error('Failed to parse JSON response:', error)
+          }
+          // For other JSON responses, throw error to stop SSE processing
+          throw new Error('Unexpected JSON response')
+        }
+
         if (
           response.ok &&
           (contentType === EventStreamContentType || contentType?.includes('text/event-stream'))
