@@ -123,8 +123,9 @@ export default function TrainingExport({
       setShowCancelModal(false)
       setProgress(0)
 
-      // Clear localStorage when task is cancelled
-      localStorage.removeItem('training_job_state')
+      // Update localStorage status instead of removing it
+      // This allows users to see cancelled task info after refresh
+      updateLocalStorage({ status: 'cancelled' })
 
       // Notify parent component to clear jobId
       onTaskComplete?.()
@@ -391,8 +392,9 @@ export default function TrainingExport({
         if (msg.event === 'error') {
           setStatus('error')
 
-          // Clear localStorage when training encounters an error
-          localStorage.removeItem('training_job_state')
+          // Update localStorage status instead of removing it
+          // This allows users to see error details after refresh
+          updateLocalStorage({ status: 'error' })
 
           // Notify parent component to clear jobId (can start new task)
           onTaskComplete?.()
@@ -417,8 +419,9 @@ export default function TrainingExport({
         if (controller.signal.aborted) return
         setStatus('error')
 
-        // Clear localStorage when training encounters an error
-        localStorage.removeItem('training_job_state')
+        // Update localStorage status instead of removing it
+        // This allows users to see error details after refresh
+        updateLocalStorage({ status: 'error' })
 
         // Notify parent component to clear jobId
         onTaskComplete?.()
