@@ -46,7 +46,7 @@ This project requires GPU environment. We recommend following settings:
 
 If you encounter problem building dependencies with ``uv sync``, please follow this installation guide.
 
-Firstly, specified the python version that you want and delete the cuda dependent package in [pyproject.toml](./pyproject.toml)
+Firstly, specified the python version that you want and delete the cuda dependent package in [pyproject.toml](../pyproject.toml)
 
 ```shell
 requires-python = "==3.11.13"  # specified python version here
@@ -90,7 +90,7 @@ dependencies = [
 
 Before installing PyTorch or vLLM, confirm your CUDA verison, run command ``nvidia-smi``.
 
-Change the cuda version specified in [pyproject.toml](./pyproject.toml) to your cuda version.
+Change the cuda version specified in [pyproject.toml](../pyproject.toml) to your cuda version.
 
 ```shell
 [[tool.uv.index]]
