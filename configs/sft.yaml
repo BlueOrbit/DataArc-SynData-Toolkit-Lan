@@ -5,7 +5,7 @@ method: sft
 # Data configuration
 data:
   train_files: ./output/learnable.jsonl
-  val_files: ./output/test.jsonl
+  val_files: ./output/val.jsonl
   train_batch_size: 32
   micro_batch_size_per_gpu: 4
   max_length: 2048                 # Maximum sequence length (prompt + response)

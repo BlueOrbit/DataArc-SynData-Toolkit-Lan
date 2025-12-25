@@ -6,7 +6,7 @@
 
 *A modular, highly user-friendly synthetic data generation toolkit supporting multi-source, multi-language data synthesis.*
 
-### Easily synthesize training data for LLMs with zero-code [CLI](#:rocket:-Quick-Start) and [GUI](#:desktop_computer:-Synthesizing-Data-with-GUI) !
+### Easily synthesize training data for LLMs with zero-code [CLI](#rocket-quick-start) and [GUI](#desktop_computer-run-with-gui) !
 
 :book: [ **English** | [中文](./README_zh.md) ]
 
@@ -16,10 +16,10 @@
 
 ## :bulb: Key Features
 
-- **Extremely Simple Usage**: Synthesize data with [a single command](#3-Synthesize-Data) and a configuration file. [GUI](##:desktop_computer:-Synthesizing-Data-with-GUI) is also provided for easy operations.
+- **Extremely Simple Usage**: Synthesize data with [a single command](#3-synthesize-data) and a configuration file. [GUI](#desktop_computer-run-with-gui) is also provided for easy operations.
 - **Support for Multi-Source Synthetic Data**:
   - **Local Synthesis**: Support for generating data based on local corpora.
-  - **Huggingface Integration**: Automatically screens and retrieves data from Huggingface.
+  - **Huggingface Integration**: Automatically crawl and filter data from Huggingface.
   - **Model Distillation**: Enable synthetic data generation through model distillation.
 - **Integrated Post-Training Module**: End-to-end model training workflows powered by verl, supporting SFT and GRPO.
 - **Multilingual Support**: Supports English and various low-resource languages.
@@ -28,7 +28,9 @@
 
 ## :movie_camera: Demo
 
-We provide a highly user friendly GUI for everything. Watch a two-minute demo to understand **DataArc SynData Toolkit**.
+Watch our 2-minute demo to experience how **DataArc SynData Toolkit** works in practice.
+
+https://github.com/user-attachments/assets/4b4d5ae4-d274-4971-a3cb-e9f07e841374
 
 ## :microscope: Performance
 
@@ -44,7 +46,7 @@ A few lines of code deliver over 20% performance improvements.
 [25/11/17] 🎉We open-sourced our synthetic data platform.  
 [25/11/27] We added **parallel processing module** to significantly accelerate the synthetic data generation pipeline.  
 [25/11/28] We added **intermediate result saving**, allowing users to resume from the last successful stage** instead of restarting the entire pipeline — a major **token saver**.  
-[25/12/xx] 🔥Major upgrade:
+[25/12/25] 🔥Major upgrade:
 - **Frontend–Backend Separation**: **DataArc SynData Toolkit** now adopts a fully frontend–backend separated architecture, featuring a **FastAPI backend** (REST APIs + SSE streaming for real-time progress) and a standalone **React** frontend for improved visualization, usability, and scalability.
 - **Post-Training Support via verl**: Introduced an integrated post-training module powered by **verl**, enabling end-to-end model training workflows including **SFT** and **GRPO** on synthesized data.
 - **Multilingual Expansion**: Added support for generating **Arabic** datasets, leveraging an Arabic translation model to produce fully localized synthetic data outputs.
@@ -58,9 +60,9 @@ A few lines of code deliver over 20% performance improvements.
 **DataArc SynData Toolkit** is designed to synthesize data in a modular pipeline, allowing users to customize the strategies and implementation methods of each step. The main components include:
 
 - **Synthetic Data Generation**: Generate data through methods such as local synthesis, Huggingface dataset retrieval, and model distillation.
-  - Developers can inherit [BaseTaskConfig](./sdgsystem/configs/config.py) and [BaseTaskExecutor](./sdgsystem/tasks/base.py) to customize the generation task.
+  - Developers can inherit [BaseTaskConfig](./sdgsystem/configs/sdg.py) and [BaseTaskExecutor](./sdgsystem/tasks/base.py) to customize the generation task.
 - **Data Filtering and Rewriting**: Filter and rewrite initially synthesized data according to the target model's requirements.
-  - Developers can inherit [BaseRewriteConfig](./sdgsystem/configs/config.py) and [BaseRewriter](./sdgsystem/generation/rewriter.py) to customize the rewrite method for synthetic data (or no rewriting).
+  - Developers can inherit [BaseRewriteConfig](./sdgsystem/configs/sdg.py) and [BaseRewriter](./sdgsystem/generation/rewriter.py) to customize the rewrite method for synthetic data (or no rewriting).
 
 ![dataarc-sdg_pipeline](assets/dataarc-syndata-toolkit_pipeline.png)
 
@@ -74,100 +76,30 @@ We provide [three different use cases](docs/USE_CASES.md) that sythesize data th
 
 ```
 DataArc-SynData-Toolkit/
-├── configs/                        # Configuration Examples
-│   ├── example.yaml                # SDG configuration example
-│   ├── sft_example.yaml            # SFT training configuration
-│   └── grpo_example.yaml           # GRPO training configuration
+├── configs/                        # YAML configuration examples
+│   ├── sdg.yaml                    # SDG pipeline config
+│   ├── sft.yaml                    # SFT training config
+│   └── grpo.yaml                   # GRPO training config
 │
-├── sdgsystem/                      # Core Implementation
-│   ├── app/                        # FastAPI Backend (REST + SSE)
-│   │   ├── api/                    # API endpoints
-│   │   │   ├── jobs.py             # job management endpoints
-│   │   │   ├── schemas.py          # Pydantic schemas
-│   │   │   └── router.py           # API router
-│   │   ├── core/                   # Core backend components
-│   │   │   ├── job_manager.py      # job lifecycle management
-│   │   │   ├── progress.py         # progress reporter for SSE
-│   │   │   └── sse.py              # Server-Sent Events utilities
-│   │   ├── services/               # Business logic services
-│   │   │   └── sdg_service.py      # SDG pipeline service wrapper
-│   │   └── main.py                 # FastAPI application entry
-│   │
-│   ├── configs/                    # Configuration Module
-│   │   ├── config.py               # configuration parsing
-│   │   └── constants.py            # default arguments
-│   │
-│   ├── dataset/                    # Dataset Module
-│   │   ├── dataset.py              # dataset class
-│   │   └── process.py              # quality control and formatting
-│   │
-│   ├── distillation/               # Model Distillation
-│   │   ├── base.py                 # base distillation class
-│   │   ├── sdg_distill.py          # SDG distillation implementation
-│   │   ├── self_instruct.py        # self-instruct method
-│   │   └── evol_instruct.py        # evol-instruct method
-│   │
-│   ├── documents/                  # Document Processing
-│   │   ├── load.py                 # document loading
-│   │   ├── parse.py                # document parsing
-│   │   ├── chunk.py                # text chunking
-│   │   └── retrieve.py             # passage retrieval (BM25)
-│   │
-│   ├── evaluation/                 # Evaluation Module
-│   │   ├── answer_comparison.py    # answer comparison methods
-│   │   └── evaluator.py            # sample evaluator
-│   │
-│   ├── generation/                 # Generation Module
-│   │   ├── base.py                 # base generator with validation
-│   │   ├── generator.py            # data generator
-│   │   └── rewriter.py             # data rewriter
-│   │
-│   ├── huggingface/                # HuggingFace Integration
-│   │   └── crawl.py                # dataset crawling from HF
-│   │
-│   ├── models/                     # Model Interaction Module
-│   │   ├── postprocess/            # response postprocessing
-│   │   │   ├── majority_voting.py  # majority voting implementation
-│   │   │   └── processor.py        # postprocessor orchestration
-│   │   ├── answer_extraction.py    # answer extraction from responses
-│   │   ├── client.py               # unified model client
-│   │   ├── models.py               # model deployment adapters
-│   │   ├── processor_arguments.py  # postprocessor arguments
-│   │   └── usage_counter.py        # token/time usage tracking
-│   │
-│   ├── tasks/                      # Task Execution Module
-│   │   ├── base.py                 # base executor class
-│   │   ├── local.py                # local document-based task
-│   │   ├── web.py                  # HuggingFace web task
-│   │   ├── distill.py              # distillation task
-│   │   └── task_executor.py        # unified task executor
-│   │
-│   ├── trainer/                    # Model Training Module (verl)
-│   │   ├── methods/                # training method implementations
-│   │   │   ├── sft.py              # SFT training method
-│   │   │   └── grpo.py             # GRPO training method
-│   │   ├── config.py               # training configuration
-│   │   ├── data_preprocessing.py   # training data preprocessing
-│   │   └── launcher.py             # training job launcher
-│   │
-│   ├── translation/                # Multilingual Support
-│   │   └── translator.py           # translation utilities
-│   │
-│   ├── webui/                      # React Frontend
-│   │
-│   ├── buffer.py                   # checkpoint/buffer management
-│   ├── cli.py                      # CLI entry point
-│   ├── parallel.py                 # parallel processing utilities
-│   ├── pipeline.py                 # main SDG pipeline
-│   ├── prompts.py                  # LLM prompts
-│   └── utils.py                    # utility functions
+├── sdgsystem/                      # Core System
+│   ├── app/                        # FastAPI backend (REST + SSE)
+│   ├── generation/                 # Data generation
+│   ├── documents/                  # File parsing & retrieval
+│   ├── huggingface/                # HF dataset integration
+│   ├── distillation/               # Model distillation synthesis
+│   ├── tasks/                      # SDG execution tasks
+│   ├── evaluation/                 # Quality evaluation
+│   ├── models/                     # Unified LLM interface & postprocess
+│   ├── trainer/                    # Post-training (verl: SFT + GRPO)
+│   ├── translation/                # Multilingual support
+│   ├── webui/                      # React frontend
+│   ├── pipeline.py                 # Core SDG pipeline
+│   └── cli.py                      # CLI entry
 │
-├── verl/                           # verl Training Framework
-│
+├── verl/                           # Integrated verl framework
 ├── docs/                           # Documentation
-│
-├── pyproject.toml                  # project dependencies
-└── README.md                       # project documentation
+├── pyproject.toml
+└── README.md
 ```
 
 ## :rocket: Quick Start
@@ -190,7 +122,7 @@ For hardware requirements and dependencies detail, please refer to [dependency a
 
 ### 2. Configuration
 
-Please refer to the [example configuration file](./configs/example.yaml) and modify the configuration based on your requirements.
+Please refer to the [example configuration file](./configs/sdg.yaml) and modify the configuration based on your requirements.
 
 ### 3. Synthesize Data
 
@@ -206,7 +138,7 @@ BASE_URL=https://api.openai.com/v1  # Optional: your base url
 And run following command.
 
 ```shell
-uv run sdg generate configs/example.yaml  # or change to your .yaml file
+uv run sdg generate configs/sdg.yaml  # or change to your .yaml file
 ```
 
 ## :twisted_rightwards_arrows: Training with Synthesized Data
@@ -217,7 +149,7 @@ uv run sdg generate configs/example.yaml  # or change to your .yaml file
 
 #### 1. Prepare Your Configuration
 
-Create a training configuration file based on the [SFT Configuration Example](./configs/sft_example.yaml) or [GRPO Configuration Example](./configs/grpo_example.yaml).
+Create a training configuration file based on the [SFT Configuration Example](./configs/sft.yaml) or [GRPO Configuration Example](./configs/grpo.yaml).
 
 #### 2. Run Training
 
@@ -255,7 +187,7 @@ If you have any doubt about regrading our Web UI, check our [Web UI document](/s
 
 ## :date: Schedule for the Next Release
 
-- **Multi-modal Dataset Synthesizing**: Support synthesize data through image.
+- **Multi-modal Dataset Synthesizing**: Support synthesize image-included dataset.
 
 ## :handshake: Contributing
 

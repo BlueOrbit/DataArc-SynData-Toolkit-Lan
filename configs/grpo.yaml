@@ -5,7 +5,7 @@ method: grpo
 # Data configuration
 data:
   train_files: ./output/learnable.jsonl
-  val_files: ./output/test.jsonl
+  val_files: ./output/val.jsonl
   train_batch_size: 64
   micro_batch_size_per_gpu: 4      # For data loading only
   max_prompt_length: 512           # Maximum prompt length

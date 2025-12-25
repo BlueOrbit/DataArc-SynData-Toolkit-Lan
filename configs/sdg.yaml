@@ -1,85 +1,67 @@
-# global configuration
-seed: 2024
-# CUDA device for all GPU operations (vLLM, SentenceTransformer, MinerU)
-device: cuda:0
-# Number of parallel workers to accelerate the process (default to 1 as sequential processing)
-n_workers: 1
-# synthetic dataset output directory. Data will save in {output_dir}/{task_name}_final.{export_format}
-output_dir: ./outputs/gsm8k
-# export dataset format
-export_format: jsonl
+# Global configuration
+device: cuda:0               # CUDA device for all GPU operations (vLLM, SentenceTransformer, MinerU)
+n_workers: 1                 # Number of parallel workers to accelerate the process (default to 1 as sequential processing)
+output_dir: ./outputs/gsm8k  # synthetic dataset output directory
+export_format: jsonl         # export dataset format
 
 # Global task configuration
 task:
   name: gsm8k
-  domain: mathematics
+  domain: mathematics        # Keywords of the domain of target dataset
   demo_examples_path: /path/to/your/demo_examples.jsonl  # path for demo examples .jsonl file (Optional)
-  task_type: local
+  task_type: local           # Choose data generation task type here: local / web / distill
 
-  # Task instruction used for data generation
+  # Task instruction used for data generation, define the type, structure, and requirements of the dataset to be generated
   task_instruction: |
     Generate a grade school math word problem that requires multi-step reasoning.
     The problem should involve basic arithmetic operations and have a clear numerical answer.
-  # Input instruction - prepended to model input during inference
+  # Input instruction - appended to prompt to guide the format of input field (Optional)
   input_instruction: |
     The input should be a math word problem that requires multi-step reasoning.
-  # Output instruction - appended to prompt to guide output format
+  # Output instruction - appended to prompt to guide the format of output field (Optional)
   output_instruction: |
     The output should contain reasoning process step by step.
-  # Number of samples to generate
-  num_samples: 10
 
-  # local task configuration
+  num_samples: 10      # Number of samples to generate
+  batch_size: 5        # Batch processing size across pipeline to accelerate data generation
+
+  # Local task: generate data from provided file
   local:
     # Parsing Configuration
     parsing:
-      # Directions to document corpora
-      document_dir: /path/to/your/document_dir
-      method: mineru  # default to mineru parser
+      document_dir: ./dataset/documents  # Path to documents directory
+      method: mineru                     # Default to mineru parser
 
     # Retrieval Configuration
     retrieval:
-      passages_dir: ./dataset/passages   # path to document passages after parsing and chunking
-      method: bm25       # default to bm25 retriever
-      top_k: 1000        # selected top k passage retrieved
+      passages_dir: ./dataset/passages   # Path to document passages after parsing and chunking
+      method: bm25                       # Default to bm25 retriever
+      top_k: 1000                        # Selected top k passage retrieved
+
+    # Generation Configuration
     generation:
-      batch_size: 5          # Batch size for generation
-      temperature: 1.0       # temperature for LLM in initial data generation
+      temperature: 1.0                   # Temperature for LLM in initial data generation
 
-  # web task configuration
+  # Web task: crawl from HuggingFace
   web:
-    huggingface_token: "hf_"        # optional. This parameter can be set by 'export HUGGINGFACE_TOKEN="YOUR TOKEN"'
-    dataset_score_threshold: 30  # minimum overall score (sum of 5 criteria) for a dataset to be valid
+    huggingface_token: "hf_"        # HF token, this parameter can be set in env (Optional)
+    dataset_score_threshold: 30     # Minimum overall score (sum of 5 criteria) for a dataset to be valid (Range: 0~50)
 
-  # distill task configuration
+  # Distill task: pure instruction-based generation
   distill:
-    # Batch size for generation (how many samples to generate per API call)
-    batch_size: 5
-    # Temperature for LLM generation
-    temperature: 1.0
+    temperature: 1.0                # Temperature for LLM distillation
 
 
 # Base model for evaluation and inference load from vllm
 base_model:
-  # Base model path
-  path: Qwen/Qwen2.5-7B
-  # Inference parameters for evaluation
-  inference:
-    temperature: 0.0
-    max_tokens: 1500
-    top_p: 0.95
-    n: 1
-  # Sampling parameters for scoring (pass@n evaluation)
-  scoring:
-    temperature: 1.2
-    n: 8
+  path: Qwen/Qwen2.5-7B             # Base model path
 
 # LLM used throughout the pipeline (Create .env file to specified base url and api key)
 llm:
   provider: openai
-  model: gpt-4o-mini
+  model: gpt-4o
 
-# Answer extraction configuration (HOW to mark final answer)
+# Answer extraction configuration (HOW to mark final answer of the question, refer to GSM8K dataset)
 answer_extraction:
   tag: "####"
   instruction: "Output your final answer after ####"
@@ -87,63 +69,69 @@ answer_extraction:
 # Postprocess for LLMs' responses
 postprocess:
   methods: 
-  - "majority_voting"
+  - majority_voting    # Default to majority voting
       
   # Majority voting for quality control of LLM's responses
   majority_voting:
-    # Number of voting
-    n: 8
-    # Method: "exact_match", "semantic_clustering", "llm_judge"
+    n: 8    # Number of voting
+
+    # Majority answer determine method: exact_match / semantic_clustering / llm_judge
     method: exact_match
-    # Exact match settings (only used if method is "exact_match")
+
+    # Exact match settings (mostly used for numerical answer)
     exact_match:
-      # For numeric answers, use tolerance instead of strict equality
-      numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
-    # # Semantic similarity settings (only used if method is "semantic_clustering")
+      numeric_tolerance: 1e-3        # Set to 0 or null for strict string matching
+    
+    # Semantic similarity settings (better tolerance of answer output)
     # semantic_clustering:
-    #   model_path: BAAI/bge-large-zh-v1.5
-    #   similarity_threshold: 0.85
-    # # LLM judge settings (only used if method is "llm_judge")
+    #   model_path: BAAI/bge-m3      # Semantic model path
+    #   similarity_threshold: 0.85   # Similarity threshold to determine majority answer
+
+    # LLM judge settings (best choice but cost)
     # llm_judge:
     #     temperature: 0.3
 
 # Evaluation Configuration
 evaluation:
-  # Batch size for evaluation
-  batch_size: 5
+  # Inference parameters for initial binary evaluation (solved vs unsolved)
+  inference:
+    temperature: 0.0
+    max_tokens: 1500
+    n: 1
 
-  # Answer comparison configuration (HOW to compare two answers)
-  # Used for both evaluation scoring and majority voting
+  # Sampling parameters for pass@n scoring
+  scoring:
+    temperature: 1.2
+    n: 8
+
+  # Answer comparison configuration (Used for both evaluation scoring and majority voting)
   answer_comparison:
-    # Method: "exact_match", "semantic", "llm_judge"
+    # Method: exact_match / semantic / llm_judge
     method: semantic
 
-    # # Exact match settings (only used if method is "exact_match")
+    # Exact match settings (mostly used for numerical answer)
     # exact_match:
-    #   # For numeric answers, use tolerance instead of strict equality
-    #   numeric_tolerance: 1e-3  # Aligned with Data_Synthesis_RL gsm8k, set to 0 or null for strict string matching
+    #   numeric_tolerance: 1e-3     # Set to 0 or null for strict string matching
 
-    # Semantic similarity settings (only used if method is "semantic")
+    # Semantic similarity settings (better tolerance of base model output answer)
     semantic:
-      model_path: BAAI/bge-small-en-v1.5
-      similarity_threshold: 0.85
+      model_path: BAAI/bge-m3       # Model path for semantic answer comparing
+      similarity_threshold: 0.85    # Semantic similarity threshold to determine same answer
 
-    # # LLM judge settings (only used if method is "llm_judge")
+    # LLM judge settings (best choice but cost)
     # llm_judge:
     #   temperature: 0.3
 
-# Rewrite Configuration (Optional)
+# Rewrite Configuration
 rewrite:
-  method: "difficulty_adjust"
+  method: difficulty_adjust    # Adjust question based on difficulty
 
   difficulty_adjust:
     easier_temperature: 0.9
     harder_temperature: 1.1
 
 # Translation Configuration
-# If language is not 'english', you must specify model_path for the translation model
 translation:
   language: english  # Target language: 'english' (no translation), 'arabic', etc.
-  # model_path: "path/to/your/Translator"  
+  # model_path: hammh0a/Hala-1.2B-EN-AR-Translator    # If language is not 'english', you must specify model_path for the translation model
   max_tokens: 256    # Maximum tokens for translation generation
-  batch_size: 1      # Batch size for translation

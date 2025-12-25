@@ -6,7 +6,7 @@
 
 *一个模块化、高度易用的合成数据生成工具集，支持多来源、多语言的数据合成。*
 
-### 使用零代码[命令行](#:rocket:-快速开始)与[可视化界面](#:desktop_computer:-可视化界面)，轻松合成大模型训练数据！
+### 使用零代码[命令行](#rocket-快速开始)与[可视化界面](#desktop_computer-可视化界面)，轻松合成大模型训练数据！
 
 :book:[ [English](./README.md) | **中文** ]
 
@@ -16,10 +16,10 @@
 
 ## :bulb: 项目特色
 
-- **极简使用**：通过一个[简单指令](#3-合成数据)和一个配置文件合成数据。也提供[可视化界面](#:desktop_computer:-可视化界面)进行操作。
+- **极简使用**：通过一个[简单指令](#3-合成数据)和一个配置文件合成数据。也提供[可视化界面](#desktop_computer-可视化界面)进行操作。
 - **支持多来源获取数据**
   - **本地合成**：支持基于本地语料合成数据。
-  - **huggingface集成**：支持基于需求自动筛查huggingface数据。
+  - **huggingface集成**：支持基于需求自动爬取筛查huggingface数据集。
   - **模型蒸馏**：支持基于模型蒸馏合成数据。
 - **集成模型后训练模块**：基于verl框架的端到端模型训练工作流，支持在合成数据上进行SFT和GRPO训练，提供REST API任务管理和HuggingFace模型上传功能。
 - **支持多语言**：支持英语以及各类小语种。
@@ -28,7 +28,9 @@
 
 ## :movie_camera: 演示
 
-我们提供高度易用的图形界面。观看两分钟演示视频了解**DataArc SynData Toolkit**。
+观看两分钟演示视频快速了解**DataArc SynData Toolkit**。
+
+https://github.com/user-attachments/assets/4b4d5ae4-d274-4971-a3cb-e9f07e841374
 
 ## :microscope: 性能表现
 
@@ -44,7 +46,7 @@
 [25/11/17] 🎉我们开源了合成数据平台。
 [25/11/27] 增加了**并行处理模块**，可以大幅度降低合成数据所需时间。
 [25/11/28] 新增合成数据中间结果保存功能，支持**断点续跑**，无需从头重新生成，节省Token消耗。
-[25/12/xx] 🔥重要更新：
+[25/12/25] 🔥重要更新：
 
 - **前后端分离架构**：**DataArc SynData Toolkit**现采用完全前后端分离的架构，配备**FastAPI后端**（REST API + SSE实时进度流式推送）和独立的**React**前端，提升可视化、易用性和可扩展性。
 
@@ -61,9 +63,9 @@
 **DataArc SynData Toolkit**的设计旨在以模块化方式运行数据合成流程，允许用户自定义各模块的策略和方法实现。主要组件包括：
 
 - **数据合成**：通过本地合成、huggingface爬取、数据蒸馏等方法合成数据。
-  - 开发者可以继承[BaseTaskConfig](./sdgsystem/configs/config.py)和[BaseTaskExecutor](./sdgsystem/tasks/base.py)定制化合成数据的方法
+  - 开发者可以继承[BaseTaskConfig](./sdgsystem/configs/sdg.py)和[BaseTaskExecutor](./sdgsystem/tasks/base.py)定制化合成数据的方法
 - **数据筛选与改写**：对初步合成的数据，针对待训练模型进行筛选和改写。
-  - 开发者可以继承[BaseRewriteConfig](./sdgsystem/configs/config.py)和[BaseRewriter](./sdgsystem/generation/rewriter.py)定制化数据改写方法（或不改写）
+  - 开发者可以继承[BaseRewriteConfig](./sdgsystem/configs/sdg.py)和[BaseRewriter](./sdgsystem/generation/rewriter.py)定制化数据改写方法（或不改写）
 
 ![dataarc-sdg_pipeline](assets/dataarc-syndata-toolkit_pipeline.png)
 
@@ -77,100 +79,30 @@
 
 ```
 DataArc-SynData-Toolkit/
-├── configs/                        # 配置样例
-│   ├── example.yaml                # SDG配置样例
-│   ├── sft_example.yaml            # SFT训练配置样例
-│   └── grpo_example.yaml           # GRPO训练配置样例
+├── configs/                        # YAML配置样例
+│   ├── sdg.yaml                    # SDG流程配置
+│   ├── sft.yaml                    # SFT训练配置
+│   └── grpo.yaml                   # GRPO训练配置
 │
-├── sdgsystem/                      # 核心实现
+├── sdgsystem/                      # 核心系统
 │   ├── app/                        # FastAPI后端 (REST + SSE)
-│   │   ├── api/                    # API端点
-│   │   │   ├── jobs.py             # 任务管理端点
-│   │   │   ├── schemas.py          # Pydantic数据模型
-│   │   │   └── router.py           # API路由
-│   │   ├── core/                   # 核心后端组件
-│   │   │   ├── job_manager.py      # 任务生命周期管理
-│   │   │   ├── progress.py         # SSE进度报告器
-│   │   │   └── sse.py              # Server-Sent Events工具
-│   │   ├── services/               # 业务逻辑服务
-│   │   │   └── sdg_service.py      # SDG流程服务封装
-│   │   └── main.py                 # FastAPI应用入口
-│   │
-│   ├── configs/                    # 配置模块
-│   │   ├── config.py               # 配置解析
-│   │   └── constants.py            # 默认参数
-│   │
-│   ├── dataset/                    # 数据集模块
-│   │   ├── dataset.py              # 数据集类
-│   │   └── process.py              # 数据处理：质量筛查与格式化
-│   │
-│   ├── distillation/               # 模型蒸馏
-│   │   ├── base.py                 # 蒸馏基类
-│   │   ├── sdg_distill.py          # SDG蒸馏实现
-│   │   ├── self_instruct.py        # Self-Instruct方法
-│   │   └── evol_instruct.py        # Evol-Instruct方法
-│   │
-│   ├── documents/                  # 文档处理
-│   │   ├── load.py                 # 文档加载
-│   │   ├── parse.py                # 文档解析
-│   │   ├── chunk.py                # 文本分块
-│   │   └── retrieve.py             # 段落检索 (BM25)
-│   │
-│   ├── evaluation/                 # 评估模块
-│   │   ├── answer_comparison.py    # 答案比对方法
-│   │   └── evaluator.py            # 样本评估器
-│   │
-│   ├── generation/                 # 生成模块
-│   │   ├── base.py                 # 生成基类（含验证）
-│   │   ├── generator.py            # 数据生成器
-│   │   └── rewriter.py             # 数据改写器
-│   │
-│   ├── huggingface/                # HuggingFace集成
-│   │   └── crawl.py                # HF数据集爬取
-│   │
-│   ├── models/                     # 模型交互模块
-│   │   ├── postprocess/            # 响应后处理
-│   │   │   ├── majority_voting.py  # 多数投票实现
-│   │   │   └── processor.py        # 后处理器编排
-│   │   ├── answer_extraction.py    # 答案抽取
-│   │   ├── client.py               # 统一模型客户端
-│   │   ├── models.py               # 模型部署适配器
-│   │   ├── processor_arguments.py  # 后处理器参数
-│   │   └── usage_counter.py        # Token/时间用量追踪
-│   │
-│   ├── tasks/                      # 任务执行模块
-│   │   ├── base.py                 # 执行器基类
-│   │   ├── local.py                # 本地文档任务
-│   │   ├── web.py                  # HuggingFace网络任务
-│   │   ├── distill.py              # 蒸馏任务
-│   │   └── task_executor.py        # 统一任务执行器
-│   │
-│   ├── trainer/                    # 模型训练模块 (verl)
-│   │   ├── methods/                # 训练方法实现
-│   │   │   ├── sft.py              # SFT训练方法
-│   │   │   └── grpo.py             # GRPO训练方法
-│   │   ├── config.py               # 训练配置
-│   │   ├── data_preprocessing.py   # 训练数据预处理
-│   │   └── launcher.py             # 训练任务启动器
-│   │
+│   ├── generation/                 # 数据生成
+│   ├── documents/                  # 文本解析与检索
+│   ├── huggingface/                # HuggingFace数据集集成
+│   ├── distillation/               # 模型蒸馏合成
+│   ├── tasks/                      # SDG执行任务
+│   ├── evaluation/                 # 质量评估
+│   ├── models/                     # 统一LLM接口与后处理
+│   ├── trainer/                    # 模型后训练 (verl: SFT + GRPO)
 │   ├── translation/                # 多语言支持
-│   │   └── translator.py           # 翻译工具
-│   │
 │   ├── webui/                      # React前端
-│   │
-│   ├── buffer.py                   # 检查点/缓存管理
-│   ├── cli.py                      # 命令行入口
-│   ├── parallel.py                 # 并行处理工具
-│   ├── pipeline.py                 # 主SDG流程
-│   ├── prompts.py                  # LLM提示词
-│   └── utils.py                    # 工具函数
+│   ├── pipeline.py                 # 核心SDG流程
+│   └── cli.py                      # 命令行入口
 │
-├── verl/                           # verl训练框架
-│
+├── verl/                           # 集成的verl训练框架
 ├── docs/                           # 文档
-│
-├── pyproject.toml                  # 项目依赖
-└── README.md                       # 项目文档
+├── pyproject.toml
+└── README.md
 ```
 
 ## :rocket: 快速开始
@@ -193,7 +125,7 @@ uv sync
 
 ### 2. 配置
 
-请参照[样例配置文件](./configs/example.yaml)，根据您的需求修改配置。
+请参照[样例配置文件](./configs/sdg.yaml)，根据您的需求修改配置。
 
 ### 3. 合成数据
 
@@ -208,18 +140,18 @@ BASE_URL=https://api.openai.com/v1  # 可选：指定的base url
 并执行如下命令。
 
 ```shell
-uv run sdg generate configs/example.yaml  # 可以更改为你的.yaml文件
+uv run sdg generate configs/sdg.yaml  # 可以更改为你的.yaml文件
 ```
 
 ## :twisted_rightwards_arrows: 使用合成数据训练模型
 
-**DataArc SynData Toolkit**集成了基于[verl](https://github.com/volcengine/verl)的端到端模型训练模块，支持直接在合成数据上训练模型。我们支持两种训练方法：**SFT（监督微调）**和**GRPO（群组相对策略优化）**
+**DataArc SynData Toolkit**集成了基于[verl](https://github.com/volcengine/verl)的端到端模型训练模块，支持直接在合成数据上训练模型。我们支持两种训练方法：**SFT（监督微调）**和**GRPO（群组相对策略优化）**。
 
 ### 通过命令行快速开始
 
 #### 1. 准备配置文件
 
-基于[SFT配置样例](./configs/sft_example.yaml)或[GRPO配置样例](./configs/grpo_example.yaml)创建训练配置文件。
+基于[SFT配置样例](./configs/sft.yaml)或[GRPO配置样例](./configs/grpo.yaml)创建训练配置文件。
 
 #### 2. 运行训练
 
@@ -253,11 +185,11 @@ pnpm install
 pnpm dev
 ```
 
-如果前端有任何问题，可以查看我们的[前端文档](docs/WEBUI_zh.md)。
+如果您对前端有任何疑问，可以查看我们的[前端文档](/sdgsystem/webui/README_zh.md)。
 
 ## :date: 下一步发布的计划
 
-- **多模态数据集合成**：支持通过图像合成数据。
+- **多模态数据集合成**：支持合成包含图像的数据集。
 
 ## :handshake: 欢迎贡献
 
